@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 joey.
+ * Copyright 2014 Cloudera.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.kitesdk.data.service;
+package org.kitesdk.data.remote.service;
 
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -22,13 +22,13 @@ import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.ReflectData;
 
-class ServiceReflectData extends ReflectData {
+public class ServiceReflectData extends ReflectData {
 
-  private Class<?> entityClass;
+  private Schema schema;
 
-  public <E> ServiceReflectData(Class<?> iface, Class<?> entityClass) {
+  public ServiceReflectData(Class<?> iface, Schema schema) {
     super(iface.getClassLoader());
-    this.entityClass = entityClass;
+    this.schema = schema;
   }
 
   @Override
@@ -36,8 +36,7 @@ class ServiceReflectData extends ReflectData {
     if (type instanceof TypeVariable) {
       TypeVariable typeVariable = (TypeVariable) type;
       if ("E".equals(typeVariable.getName())) {
-        System.err.println(typeVariable.getName());
-        type = entityClass;
+        return schema;
       }
     }
     return super.createSchema(type, names);

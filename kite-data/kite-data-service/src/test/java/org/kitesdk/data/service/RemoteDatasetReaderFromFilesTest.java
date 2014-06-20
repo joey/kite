@@ -20,23 +20,22 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.ipc.NettyTransceiver;
 import org.apache.avro.ipc.reflect.ReflectRequestor;
 import org.apache.avro.reflect.ReflectData;
 import org.junit.*;
-import org.kitesdk.data.DatasetDescriptor;
-import org.kitesdk.data.DatasetReader;
-import org.kitesdk.data.TestDatasetReaders;
+import org.kitesdk.data.*;
 import org.kitesdk.data.remote.RemoteDataset;
 import org.kitesdk.data.remote.protocol.RemoteDataProtocol;
 import org.kitesdk.data.remote.service.DatasetServer;
 import org.kitesdk.data.remote.service.ServiceReflectData;
 import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
-public class RemoteDatasetReaderTest extends TestDatasetReaders {
+public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
 
   static final int port = 42424;
-  static MemoryDataset<User> dataset;
+  static Dataset<GenericRecord> dataset;
   static List<User> data = Arrays.asList(
       new User("Joey", "blue"),
       new User("Sean", "green"),
@@ -46,10 +45,25 @@ public class RemoteDatasetReaderTest extends TestDatasetReaders {
 
   @BeforeClass
   public static void setUpClass() {
-    dataset = new MemoryDataset.Builder().name("users").
-        descriptor(new DatasetDescriptor.Builder().schema(User.class).build()).
-        data(data).
-        build();
+    DatasetRepository repo = DatasetRepositories.open("repo:file:///tmp/data");
+    DatasetDescriptor descriptor = new DatasetDescriptor.Builder()
+        .schema(User.class)
+        .build();
+    if (repo.exists("users")) {
+      repo.delete("users");
+    }
+    Dataset<User> users = repo.create("users", descriptor);
+    DatasetWriter<User> writer = users.newWriter();
+    try {
+      writer.open();
+      for (User user : data) {
+        writer.write(user);
+      }
+    } finally {
+      writer.close();
+    }
+
+    dataset = repo.load("users");
     DatasetServer.startServer(dataset, port);
   }
 

@@ -32,11 +32,14 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
   private String name;
   private DatasetDescriptor descriptor;
 
-  MemoryDataset(String name, DatasetDescriptor descriptor) {
+  MemoryDataset(String name, DatasetDescriptor descriptor, List<E> data) {
     this.name = name;
     this.descriptor = descriptor;
 
-    data = new ArrayList<E>();
+    this.data = new ArrayList<E>();
+    if (data != null) {
+      this.data.addAll(data);
+    }
   }
 
   @Override
@@ -87,6 +90,7 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
   public static class Builder {
     private String name;
     private DatasetDescriptor descriptor;
+    private List data;
 
     public Builder name(String name) {
       this.name = name;
@@ -98,12 +102,18 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
       return this;
     }
 
+    public <E> Builder data(List<E> data) {
+      this.data = data;
+      return this;
+    }
+
+    @SuppressWarnings("unchecked")
     public <E> MemoryDataset<E> build() {
       Preconditions.checkState(this.name != null, "No dataset name defined");
       Preconditions.checkState(this.descriptor != null,
         "No dataset descriptor defined");
 
-      return new MemoryDataset<E>(name, descriptor);
+      return new MemoryDataset<E>(name, descriptor, data);
     }
   }
 
