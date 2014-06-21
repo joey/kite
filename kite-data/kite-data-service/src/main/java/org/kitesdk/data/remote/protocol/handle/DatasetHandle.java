@@ -16,5 +16,44 @@
 
 package org.kitesdk.data.remote.protocol.handle;
 
+import org.apache.avro.Schema;
+import org.apache.avro.reflect.AvroEncode;
+import org.apache.avro.reflect.Nullable;
+import org.kitesdk.data.SchemaAsStringEncoding;
+
 public class DatasetHandle extends RefinableViewHandle {
+
+  @Nullable
+  private String hostname;
+
+  @Nullable
+  private int port;
+
+  @Nullable
+  @AvroEncode(using=SchemaAsStringEncoding.class)
+  private Schema schema;
+
+  public String getHostname() {
+    return hostname;
+  }
+
+  public void setHostname(String hostname) {
+    this.hostname = hostname;
+  }
+
+  public int getPort() {
+    return port;
+  }
+
+  public void setPort(int port) {
+    this.port = port;
+  }
+
+  public Schema getSchema() {
+    return schema;
+  }
+
+  public void setSchema(Schema schema) {
+    this.schema = schema;
+  }
 }

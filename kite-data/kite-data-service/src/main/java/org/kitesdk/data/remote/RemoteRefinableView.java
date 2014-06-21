@@ -17,6 +17,7 @@ package org.kitesdk.data.remote;
 
 import java.io.IOException;
 import org.apache.avro.AvroRuntimeException;
+import org.apache.avro.Schema;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.DatasetWriter;
@@ -34,10 +35,10 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
 
   private RemoteDataProtocol<E> proxy;
   private RefinableViewHandle handle;
-  private Class<E> type;
+  private Schema type;
 
   @SuppressWarnings("unchecked")
-  public RemoteRefinableView(RemoteDataProtocol<E> proxy, RefinableViewHandle handle, Class<E> type) throws IOException {
+  public RemoteRefinableView(RemoteDataProtocol<E> proxy, RefinableViewHandle handle, Schema type) throws IOException {
     this.proxy = proxy;
     this.handle = handle;
     this.type = type;
@@ -117,7 +118,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public DatasetReader<E> newReader() {
     try {
       DatasetReaderHandle readerHandle = proxy.newReader(handle);
-      return new RemoteDatasetReader<E>(proxy, readerHandle, type);
+      return new RemoteDatasetReader<E>(proxy, readerHandle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -130,7 +131,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public DatasetWriter<E> newWriter() {
     try {
       DatasetWriterHandle writerHandle = proxy.newWriter(handle);
-      return new RemoteDatasetWriter<E>(proxy, writerHandle, type);
+      return new RemoteDatasetWriter<E>(proxy, writerHandle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;

@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.avro.Schema;
+import org.apache.avro.ipc.NettyServer;
 import org.apache.avro.ipc.NettyTransceiver;
 import org.apache.avro.ipc.reflect.ReflectRequestor;
 import org.apache.avro.reflect.ReflectData;
@@ -35,6 +37,7 @@ import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
 public class RemoteDatasetReaderTest extends TestDatasetReaders {
 
+  static NettyServer server;
   static final int port = 42424;
   static MemoryDataset<User> dataset;
   static List<User> data = Arrays.asList(
@@ -50,19 +53,24 @@ public class RemoteDatasetReaderTest extends TestDatasetReaders {
         descriptor(new DatasetDescriptor.Builder().schema(User.class).build()).
         data(data).
         build();
-    DatasetServer.startServer(dataset, port);
+    server = DatasetServer.startServer(dataset, port);
+  }
+
+  @AfterClass
+  public static void tearDownClass() {
+    server.close();
   }
 
   @Override
   public DatasetReader newReader() throws IOException {
+    Schema schema = new ReflectData().getSchema(User.class);
     NettyTransceiver client = new NettyTransceiver(new InetSocketAddress(port));
     @SuppressWarnings("unchecked")
     RemoteDataProtocol<User> proxy = ReflectRequestor.getClient(
         RemoteDataProtocol.class, client,
-        new ServiceReflectData(RemoteDataProtocol.class,
-          new ReflectData().getSchema(User.class)));
+        new ServiceReflectData(RemoteDataProtocol.class, schema));
     RemoteDataset<User> remoteDataset = new RemoteDataset<User>(proxy,
-        proxy.getRootHandle(), User.class);
+        proxy.getRootHandle(), schema);
     return remoteDataset.newReader();
   }
 

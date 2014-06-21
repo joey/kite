@@ -32,7 +32,7 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
   private DatasetWriterHandle handle;
 
   @SuppressWarnings("unchecked")
-  public RemoteDatasetWriter(RemoteDataProtocol<E> proxy, DatasetWriterHandle handle, Class<E> type) throws IOException {
+  public RemoteDatasetWriter(RemoteDataProtocol<E> proxy, DatasetWriterHandle handle) throws IOException {
     this.proxy = proxy;
     this.handle = handle;
   }

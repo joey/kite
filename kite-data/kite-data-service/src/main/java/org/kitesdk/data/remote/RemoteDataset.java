@@ -18,6 +18,7 @@ package org.kitesdk.data.remote;
 import java.io.IOException;
 import java.util.Iterator;
 import org.apache.avro.AvroRuntimeException;
+import org.apache.avro.Schema;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.PartitionKey;
@@ -32,10 +33,10 @@ public class RemoteDataset<E> extends RemoteRefinableView<E> implements Dataset<
 
   private RemoteDataProtocol<E> proxy;
   private DatasetHandle handle;
-  private Class<E> type;
+  private Schema type;
 
   @SuppressWarnings("unchecked")
-  public RemoteDataset(RemoteDataProtocol<E> proxy, DatasetHandle handle, Class<E> type) throws IOException {
+  public RemoteDataset(RemoteDataProtocol<E> proxy, DatasetHandle handle, Schema type) throws IOException {
     super(proxy, handle, type);
     this.proxy = proxy;
     this.handle = handle;

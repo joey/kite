@@ -33,7 +33,7 @@ public class RemoteDatasetReader<E> extends RemoteAvroClient implements DatasetR
   private DatasetReaderHandle handle;
 
   @SuppressWarnings("unchecked")
-  public RemoteDatasetReader(RemoteDataProtocol<E> proxy, DatasetReaderHandle handle, Class<E> type) throws IOException {
+  public RemoteDatasetReader(RemoteDataProtocol<E> proxy, DatasetReaderHandle handle) throws IOException {
     this.proxy = proxy;
     this.handle = handle;
   }

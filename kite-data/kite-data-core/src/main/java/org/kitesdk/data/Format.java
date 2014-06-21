@@ -47,6 +47,14 @@ public class Format {
   }
 
   /**
+   * Empty constructor needed to deserialize {@code Format} objects
+   * using Avro reflect APIs.
+   */
+  private Format() {
+    name = null;
+  }
+
+  /**
    * Get the format's name.
    * @return the name
    */

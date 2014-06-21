@@ -266,13 +266,23 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
     return get(handle).isOpen();
   }
 
+  private Schema getSchema() {
+    return get(rootHandle).getDescriptor().getSchema();
+  }
+
   public static <E> NettyServer startServer(Dataset<E> dataset, int port) {
-    DatasetServer<E> dataServer = new DatasetServer<E>(dataset);
+
+    return startServer(new DatasetServer<E>(dataset), port);
+  }
+
+  public static <E> NettyServer startServer(DatasetServer<E> dataServer, int port) {
+    Schema schema = dataServer.getSchema();
     ServiceReflectData data = new ServiceReflectData(RemoteDataProtocol.class,
-        dataset.getDescriptor().getSchema());
+        schema);
 
     final NettyServer server = new NettyServer(
-        new ReflectResponder(RemoteDataProtocol.class, dataServer, data),
+        new ServiceReflectResponder(RemoteDataProtocol.class, dataServer, data,
+            schema),
         new InetSocketAddress(port));
     server.start();
     return server;
@@ -280,7 +290,16 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
 
   public static <E> void serve(Dataset<E> dataset, int port)
       throws InterruptedException {
-    final NettyServer server = startServer(dataset, port);
+    serve(startServer(dataset, port));
+  }
+
+  public static <E> void serve(DatasetServer<E> dataServer, int port)
+      throws InterruptedException {
+    serve(startServer(dataServer, port));
+  }
+
+  private static <E> void serve(final NettyServer server)
+      throws InterruptedException {
     boolean wait = true;
     while (wait) {
       try {

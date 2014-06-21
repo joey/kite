@@ -41,6 +41,7 @@ import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.reflect.AvroEncode;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.hadoop.fs.Path;
 import org.kitesdk.data.spi.ColumnMappingParser;
@@ -64,14 +65,37 @@ import org.kitesdk.data.spi.partition.IdentityFieldPartitioner;
 @Immutable
 public class DatasetDescriptor {
 
+  @AvroEncode(using=SchemaAsStringEncoding.class)
   private final Schema schema;
+
+  @org.apache.avro.reflect.Nullable
   private final URL schemaUrl;
   private final Format format;
+
+  @org.apache.avro.reflect.Nullable
   private final URI location;
   private final Map<String, String> properties;
+
+  @org.apache.avro.reflect.Nullable
   private final PartitionStrategy partitionStrategy;
+
+  @org.apache.avro.reflect.Nullable
   private final ColumnMapping columnMappings;
   private final CompressionType compressionType;
+
+  /**
+   * Empty constructor needed to deserialize {@code DatasetDescriptor} objects
+   * using Avro reflect APIs.
+   */
+  private DatasetDescriptor() {
+    schema = null;
+    schemaUrl = null;
+    format = null;
+    location = null;
+    properties = null;
+    partitionStrategy = null;
+    columnMappings = null;
+  }
 
   /**
    * Create an instance of this class with the supplied {@link Schema},

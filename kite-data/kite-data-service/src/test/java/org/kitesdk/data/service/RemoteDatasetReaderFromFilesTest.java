@@ -17,25 +17,20 @@ package org.kitesdk.data.service;
 
 import com.google.common.base.Preconditions;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.ipc.NettyTransceiver;
-import org.apache.avro.ipc.reflect.ReflectRequestor;
-import org.apache.avro.reflect.ReflectData;
+import org.apache.avro.ipc.NettyServer;
 import org.junit.*;
 import org.kitesdk.data.*;
-import org.kitesdk.data.remote.RemoteDataset;
-import org.kitesdk.data.remote.protocol.RemoteDataProtocol;
-import org.kitesdk.data.remote.service.DatasetServer;
-import org.kitesdk.data.remote.service.ServiceReflectData;
+import org.kitesdk.data.remote.RemoteDatasetRepository;
+import org.kitesdk.data.remote.service.DatasetRepositoryServer;
 import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
 public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
 
+  static NettyServer server;
   static final int port = 42424;
-  static Dataset<GenericRecord> dataset;
+  static DatasetRepository repository;
   static List<User> data = Arrays.asList(
       new User("Joey", "blue"),
       new User("Sean", "green"),
@@ -44,15 +39,17 @@ public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
       new User("Tom", "black"));
 
   @BeforeClass
-  public static void setUpClass() {
-    DatasetRepository repo = DatasetRepositories.open("repo:file:///tmp/data");
+  public static void setUpClass() throws IOException {
+    server = DatasetRepositoryServer.startServer("repo:file:///tmp/data", port);
+
+    repository = new RemoteDatasetRepository("localhost", port);
     DatasetDescriptor descriptor = new DatasetDescriptor.Builder()
         .schema(User.class)
         .build();
-    if (repo.exists("users")) {
-      repo.delete("users");
+    if (repository.exists("users")) {
+      repository.delete("users");
     }
-    Dataset<User> users = repo.create("users", descriptor);
+    Dataset<User> users = repository.create("users", descriptor);
     DatasetWriter<User> writer = users.newWriter();
     try {
       writer.open();
@@ -62,22 +59,17 @@ public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
     } finally {
       writer.close();
     }
+  }
 
-    dataset = repo.load("users");
-    DatasetServer.startServer(dataset, port);
+  @AfterClass
+  public static void tearDownClass() {
+    server.close();
   }
 
   @Override
   public DatasetReader newReader() throws IOException {
-    NettyTransceiver client = new NettyTransceiver(new InetSocketAddress(port));
-    @SuppressWarnings("unchecked")
-    RemoteDataProtocol<User> proxy = ReflectRequestor.getClient(
-        RemoteDataProtocol.class, client,
-        new ServiceReflectData(RemoteDataProtocol.class,
-          new ReflectData().getSchema(User.class)));
-    RemoteDataset<User> remoteDataset = new RemoteDataset<User>(proxy,
-        proxy.getRootHandle(), User.class);
-    return remoteDataset.newReader();
+    Dataset<User> dataset = repository.load("users");
+    return dataset.newReader();
   }
 
   @Override
