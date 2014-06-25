@@ -15,6 +15,8 @@
  */
 package org.kitesdk.data.service;
 
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.*;
+
 import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Arrays;
@@ -31,12 +33,6 @@ public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
   static NettyServer server;
   static final int port = 42424;
   static DatasetRepository repository;
-  static List<User> data = Arrays.asList(
-      new User("Joey", "blue"),
-      new User("Sean", "green"),
-      new User("Alex", "red"),
-      new User("Ryan", "orange"),
-      new User("Tom", "black"));
 
   @BeforeClass
   public static void setUpClass() throws IOException {

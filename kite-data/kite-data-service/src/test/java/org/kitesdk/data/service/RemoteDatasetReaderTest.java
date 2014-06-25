@@ -15,18 +15,17 @@
  */
 package org.kitesdk.data.service;
 
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.*;
+
 import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.List;
 import org.apache.avro.Schema;
 import org.apache.avro.ipc.NettyServer;
 import org.apache.avro.ipc.NettyTransceiver;
 import org.apache.avro.ipc.reflect.ReflectRequestor;
 import org.apache.avro.reflect.ReflectData;
 import org.junit.*;
-import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.TestDatasetReaders;
 import org.kitesdk.data.remote.RemoteDataset;
@@ -37,22 +36,13 @@ import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
 public class RemoteDatasetReaderTest extends TestDatasetReaders {
 
-  static NettyServer server;
   static final int port = 42424;
+  static NettyServer server;
   static MemoryDataset<User> dataset;
-  static List<User> data = Arrays.asList(
-      new User("Joey", "blue"),
-      new User("Sean", "green"),
-      new User("Alex", "red"),
-      new User("Ryan", "orange"),
-      new User("Tom", "black"));
 
   @BeforeClass
   public static void setUpClass() {
-    dataset = new MemoryDataset.Builder().name("users").
-        descriptor(new DatasetDescriptor.Builder().schema(User.class).build()).
-        data(data).
-        build();
+    dataset = createMemoryDataset();
     server = DatasetServer.startServer(dataset, port);
   }
 

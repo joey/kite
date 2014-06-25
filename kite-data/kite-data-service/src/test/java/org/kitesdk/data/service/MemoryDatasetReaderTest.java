@@ -15,38 +15,24 @@
  */
 package org.kitesdk.data.service;
 
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.*;
+
 import com.google.common.base.Preconditions;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import org.junit.*;
-import org.kitesdk.data.DatasetDescriptor;
+import org.junit.BeforeClass;
 import org.kitesdk.data.DatasetReader;
-import org.kitesdk.data.DatasetWriter;
 import org.kitesdk.data.TestDatasetReaders;
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.createMemoryDataset;
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.data;
 import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
 public class MemoryDatasetReaderTest extends TestDatasetReaders {
 
   static MemoryDataset<User> dataset;
-  static List<User> data = Arrays.asList(
-      new User("Joey", "blue"),
-      new User("Sean", "green"),
-      new User("Alex", "red"),
-      new User("Ryan", "orange"),
-      new User("Tom", "black"));
 
   @BeforeClass
   public static void setUpClass() {
-    dataset = new MemoryDataset.Builder().name("users").
-        descriptor(new DatasetDescriptor.Builder().schema(User.class).build()).
-        build();
-    DatasetWriter<User> writer = dataset.newWriter();
-    writer.open();
-    for (User u : data) {
-      writer.write(u);
-    }
-    writer.close();
+    dataset = createMemoryDataset();
   }
 
   @Override
@@ -77,65 +63,4 @@ public class MemoryDatasetReaderTest extends TestDatasetReaders {
     }
     
   }
-
-  public static class User {
-    private String name;
-    private String color;
-
-    public User() {
-    }
-
-    public User(String name, String color) {
-      this.name = name;
-      this.color = color;
-    }
-
-    public void setName(String name) {
-      this.name = name;
-    }
-
-    public String getName() {
-      return name;
-    }
-
-    public void setColor(String color) {
-      this.color = color;
-    }
-
-    public String getColor() {
-      return color;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("User { name = '%s'; color = '%s'; }", name, color);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
-        return false;
-      }
-      final User other = (User) obj;
-      if ((this.name == null) ? (other.name != null) : !this.name.equals(other.name)) {
-        return false;
-      }
-      if ((this.color == null) ? (other.color != null) : !this.color.equals(other.color)) {
-        return false;
-      }
-      return true;
-    }
-
-    @Override
-    public int hashCode() {
-      int hash = 7;
-      hash = 67 * hash + (this.name != null ? this.name.hashCode() : 0);
-      hash = 67 * hash + (this.color != null ? this.color.hashCode() : 0);
-      return hash;
-    }
-  }
-
 }
