@@ -19,12 +19,20 @@ package org.kitesdk.data.remote.service;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.ipc.NettyServer;
 import org.apache.avro.ipc.reflect.ReflectResponder;
-import org.kitesdk.data.*;
+import org.kitesdk.data.Dataset;
+import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.remote.protocol.DatasetRepositoryProtocol;
 import org.kitesdk.data.remote.protocol.handle.DatasetHandle;
+import org.kitesdk.data.remote.protocol.handle.DatasetRepositoryHandle;
+import org.kitesdk.data.remote.protocol.handle.HandleFactory;
+import org.kitesdk.data.spi.DatasetRepositories;
+import org.kitesdk.data.spi.DatasetRepository;
 import org.slf4j.LoggerFactory;
 
 public class DatasetRepositoryServer implements DatasetRepositoryProtocol {
@@ -32,41 +40,33 @@ public class DatasetRepositoryServer implements DatasetRepositoryProtocol {
   private static final org.slf4j.Logger LOG = LoggerFactory
     .getLogger(DatasetRepositoryServer.class);
 
-  private DatasetRepository repository;
+  private final Map<DatasetRepositoryHandle, DatasetRepository> repositories;
 
-  public DatasetRepositoryServer(String uri) {
-    this(DatasetRepositories.open(uri));
-  }
-
-  public DatasetRepositoryServer(URI uri) {
-    this(DatasetRepositories.open(uri));
-  }
-
-  public DatasetRepositoryServer(DatasetRepository repository) {
-    this.repository = repository;
+  public DatasetRepositoryServer() {
+    repositories = new HashMap<DatasetRepositoryHandle, DatasetRepository>();
   }
 
   @Override
-  public DatasetHandle load(String name) {
-    Dataset<Object> dataset = repository.load(name);
+  public DatasetHandle load(DatasetRepositoryHandle handle, String name) {
+    Dataset<GenericData.Record> dataset = repositories.get(handle).load(name, GenericData.Record.class);
     return createDatasetServer(dataset);
   }
 
   @Override
-  public DatasetHandle create(String name, DatasetDescriptor descriptor) {
-    Dataset<Object> dataset = repository.create(name, descriptor);
+  public DatasetHandle create(DatasetRepositoryHandle handle, String name, DatasetDescriptor descriptor) {
+    Dataset<GenericData.Record> dataset = repositories.get(handle).create(name, descriptor);
     return createDatasetServer(dataset);
   }
 
   @Override
-  public DatasetHandle update(String name, DatasetDescriptor descriptor) {
-    Dataset<Object> dataset = repository.update(name, descriptor);
+  public DatasetHandle update(DatasetRepositoryHandle handle, String name, DatasetDescriptor descriptor) {
+    Dataset<GenericData.Record> dataset = repositories.get(handle).update(name, descriptor);
     return createDatasetServer(dataset);
   }
 
-  private DatasetHandle createDatasetServer(Dataset<Object> dataset) {
+  private DatasetHandle createDatasetServer(Dataset<GenericData.Record> dataset) {
     Schema schema = dataset.getDescriptor().getSchema();
-    DatasetServer<Object> server = new DatasetServer<Object>(dataset);
+    DatasetServer<GenericData.Record> server = new DatasetServer<GenericData.Record>(dataset);
     int port = DatasetServer.startServer(server, 0).getPort();
     DatasetHandle handle = server.getRootHandle();
     handle.setPort(port);
@@ -75,34 +75,27 @@ public class DatasetRepositoryServer implements DatasetRepositoryProtocol {
   }
 
   @Override
-  public boolean delete(String name) {
-    return repository.delete(name);
+  public boolean delete(DatasetRepositoryHandle handle, String name) {
+    return repositories.get(handle).delete(name);
   }
 
   @Override
-  public boolean exists(String name) {
-    return repository.exists(name);
+  public boolean exists(DatasetRepositoryHandle handle, String name) {
+    return repositories.get(handle).exists(name);
   }
 
   @Override
-  public Collection<String> list() {
-    return repository.list();
+  public Collection<String> list(DatasetRepositoryHandle handle) {
+    return repositories.get(handle).list();
   }
 
   @Override
-  public URI getUri() {
-    return repository.getUri();
+  public URI getUri(DatasetRepositoryHandle handle) {
+    return repositories.get(handle).getUri();
   }
 
-  public static NettyServer startServer(String uri, int port) {
-    return startServer(new DatasetRepositoryServer(uri), port);
-  }
-  public static NettyServer startServer(URI uri, int port) {
-    return startServer(new DatasetRepositoryServer(uri), port);
-  }
-
-  public static NettyServer startServer(DatasetRepository repository, int port) {
-    return startServer(new DatasetRepositoryServer(repository), port);
+  public static NettyServer startServer(int port) {
+    return startServer(new DatasetRepositoryServer(), port);
   }
 
   private static NettyServer startServer(DatasetRepositoryServer repositoryServer,
@@ -115,16 +108,8 @@ public class DatasetRepositoryServer implements DatasetRepositoryProtocol {
     return server;
   }
 
-  public static void serve(String uri, int port) throws InterruptedException {
-    serve(startServer(uri, port));
-  }
-
-  public static void serve(URI uri, int port) throws InterruptedException {
-    serve(startServer(uri, port));
-  }
-
-  public static void serve(DatasetRepository repository, int port) throws InterruptedException {
-    serve(startServer(repository, port));
+  public static void serve(int port) throws InterruptedException {
+    serve(startServer(port));
   }
 
   private static void serve(final NettyServer server)
@@ -143,5 +128,15 @@ public class DatasetRepositoryServer implements DatasetRepositoryProtocol {
         throw ex;
       }
     }
+  }
+
+  @Override
+  public DatasetRepositoryHandle openRespository(String uri) {
+    DatasetRepository repository = DatasetRepositories.repositoryFor(uri);
+    DatasetRepositoryHandle handle = HandleFactory.nextDatasetRepositoryHandle();
+    handle.setUri(repository.getUri().toString());
+    repositories.put(handle, repository);
+
+    return handle;
   }
 }

@@ -77,4 +77,9 @@ public interface RefinableViewProtocol<E> {
    * @see RefinableView#deleteAll()
    */
   public boolean deleteAll(RefinableViewHandle handle);
+
+  /**
+   * @see RefinableView#isEmpty()
+   */
+  public boolean isEmpty(RefinableViewHandle handle);
 }

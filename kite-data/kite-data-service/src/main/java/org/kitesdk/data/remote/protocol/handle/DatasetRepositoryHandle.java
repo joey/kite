@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Cloudera.
+ * Copyright 2014 joey.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 package org.kitesdk.data.remote.protocol.handle;
 
-import org.apache.avro.reflect.Nullable;
 
-public class RefinableViewHandle extends Handle {
+public class DatasetRepositoryHandle extends Handle {
 
-  @Nullable
   private String uri;
 
   public String getUri() {
@@ -30,4 +28,5 @@ public class RefinableViewHandle extends Handle {
   public void setUri(String uri) {
     this.uri = uri;
   }
+
 }

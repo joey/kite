@@ -24,7 +24,7 @@ import org.apache.avro.reflect.ReflectData;
 
 public class ServiceReflectData extends ReflectData {
 
-  private Schema schema;
+  private final Schema schema;
 
   public ServiceReflectData(Class<?> iface, Schema schema) {
     super(iface.getClassLoader());

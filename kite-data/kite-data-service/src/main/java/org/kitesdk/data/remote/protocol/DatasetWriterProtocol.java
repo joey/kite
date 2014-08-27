@@ -26,11 +26,6 @@ import org.kitesdk.data.DatasetWriter;
 public interface DatasetWriterProtocol<E> {
 
   /**
-   * @see DatasetWriter#open()
-   */
-  void openWriter(DatasetWriterHandle handle);
-
-  /**
    * @see DatasetWriter#write(java.lang.Object)
    */
   void write(DatasetWriterHandle handle, E entity);
@@ -49,4 +44,9 @@ public interface DatasetWriterProtocol<E> {
    * @see DatasetWriter#isOpen()
    */
   boolean isWriterOpen(DatasetWriterHandle handle);
+
+  /**
+   * @see DatasetWriter#sync()
+   */
+  void sync(DatasetWriterHandle handle);
 }

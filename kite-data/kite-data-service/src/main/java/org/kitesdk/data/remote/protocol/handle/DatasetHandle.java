@@ -19,7 +19,7 @@ package org.kitesdk.data.remote.protocol.handle;
 import org.apache.avro.Schema;
 import org.apache.avro.reflect.AvroEncode;
 import org.apache.avro.reflect.Nullable;
-import org.kitesdk.data.SchemaAsStringEncoding;
+import org.kitesdk.data.spi.SchemaAsStringEncoding;
 
 public class DatasetHandle extends RefinableViewHandle {
 

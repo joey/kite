@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package org.kitesdk.data;
+package org.kitesdk.data.spi;
 
 import java.io.IOException;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Parser;
-import org.apache.avro.SchemaBuilder;
 import org.apache.avro.io.Decoder;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.reflect.CustomEncoding;
 
 public class SchemaAsStringEncoding extends CustomEncoding<Schema> {
-  {
+
+  private static final String NULL = "";
+
+  public SchemaAsStringEncoding() {
     schema = Schema.create(Schema.Type.STRING);
     schema.addProp("CustomEncoding", "SchemaAsStringEncoding");
   }
-
-  private static final String NULL = "";
 
   @Override
   protected void write(Object datum, Encoder out) throws IOException {

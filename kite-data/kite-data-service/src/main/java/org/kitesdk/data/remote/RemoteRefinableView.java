@@ -16,9 +16,12 @@
 package org.kitesdk.data.remote;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
 import org.kitesdk.data.Dataset;
+import org.kitesdk.data.DatasetException;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.DatasetWriter;
 import org.kitesdk.data.RefinableView;
@@ -33,22 +36,36 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(RemoteRefinableView.class);
 
-  private RemoteDataProtocol<E> proxy;
-  private RefinableViewHandle handle;
-  private Schema type;
+  private final RemoteDataProtocol<E> proxy;
+  private final RefinableViewHandle handle;
+  private final Schema schema;
+  private final Class<E> type;
+  private final URI uri;
 
   @SuppressWarnings("unchecked")
-  public RemoteRefinableView(RemoteDataProtocol<E> proxy, RefinableViewHandle handle, Schema type) throws IOException {
+  public RemoteRefinableView(RemoteDataProtocol<E> proxy,
+      RefinableViewHandle handle, Schema schema, Class<E> type) throws IOException {
     this.proxy = proxy;
     this.handle = handle;
+    this.schema = schema;
     this.type = type;
+
+    try {
+      String scheme = "view";
+      if (handle.getUri().startsWith("dataset")) {
+        scheme = "dataset";
+      }
+      uri = new URI(scheme+":remote:"+handle.getUri());
+    } catch (URISyntaxException ex) {
+      throw new DatasetException(ex);
+    }
   }
 
   @Override
   public RefinableView<E> with(String name, Object... values) {
     try {
       RefinableViewHandle viewHandle = proxy.with(handle, name, values);
-      return new RemoteRefinableView<E>(proxy, viewHandle, type);
+      return new RemoteRefinableView<E>(proxy, viewHandle, schema, type);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -61,7 +78,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public RefinableView<E> from(String name, Comparable value) {
     try {
       RefinableViewHandle viewHandle = proxy.from(handle, name, value);
-      return new RemoteRefinableView<E>(proxy, viewHandle, type);
+      return new RemoteRefinableView<E>(proxy, viewHandle, schema, type);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -74,7 +91,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public RefinableView<E> fromAfter(String name, Comparable value) {
     try {
       RefinableViewHandle viewHandle = proxy.fromAfter(handle, name, value);
-      return new RemoteRefinableView<E>(proxy, viewHandle, type);
+      return new RemoteRefinableView<E>(proxy, viewHandle, schema, type);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -87,7 +104,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public RefinableView<E> to(String name, Comparable value) {
     try {
       RefinableViewHandle viewHandle = proxy.to(handle, name, value);
-      return new RemoteRefinableView<E>(proxy, viewHandle, type);
+      return new RemoteRefinableView<E>(proxy, viewHandle, schema, type);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -100,7 +117,7 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
   public RefinableView<E> toBefore(String name, Comparable value) {
     try {
       RefinableViewHandle viewHandle = proxy.toBefore(handle, name, value);
-      return new RemoteRefinableView<E>(proxy, viewHandle, type);
+      return new RemoteRefinableView<E>(proxy, viewHandle, schema, type);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -111,6 +128,9 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
 
   @Override
   public Dataset<E> getDataset() {
+    if (this instanceof Dataset) {
+      return (Dataset<E>)this;
+    }
     throw new UnsupportedOperationException("Not supported yet.");
   }
 
@@ -158,5 +178,25 @@ public class RemoteRefinableView<E> extends RemoteAvroClient implements Refinabl
       handleAvroRuntimeException(ex);
       throw ex;
     }
+  }
+
+  @Override
+  public Class<E> getType() {
+    return type;
+  }
+
+  @Override
+  public boolean isEmpty() {
+    try {
+      return proxy.isEmpty(handle);
+    } catch (AvroRuntimeException ex) {
+      handleAvroRuntimeException(ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public URI getUri() {
+    return uri;
   }
 }

@@ -22,8 +22,11 @@ import java.util.Iterator;
 import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.avro.ipc.NettyServer;
-import org.apache.avro.ipc.reflect.ReflectResponder;
-import org.kitesdk.data.*;
+import org.kitesdk.data.Dataset;
+import org.kitesdk.data.DatasetDescriptor;
+import org.kitesdk.data.DatasetReader;
+import org.kitesdk.data.DatasetWriter;
+import org.kitesdk.data.RefinableView;
 import org.kitesdk.data.remote.protocol.RemoteDataProtocol;
 import org.kitesdk.data.remote.protocol.handle.DatasetHandle;
 import org.kitesdk.data.remote.protocol.handle.DatasetReaderHandle;
@@ -37,19 +40,17 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
   private static final org.slf4j.Logger LOG = LoggerFactory
     .getLogger(DatasetServer.class);
 
-  private Map<DatasetHandle, Dataset<E>> datasets;
-  private Map<RefinableViewHandle, RefinableView<E>> views;
-  private Map<DatasetReaderHandle, DatasetReader<E>> readers;
-  private Map<DatasetWriterHandle, DatasetWriter<E>> writers;
-  private HandleFactory handleFactory;
-  private DatasetHandle rootHandle;
+  private final Map<DatasetHandle, Dataset<E>> datasets;
+  private final Map<RefinableViewHandle, RefinableView<E>> views;
+  private final Map<DatasetReaderHandle, DatasetReader<E>> readers;
+  private final Map<DatasetWriterHandle, DatasetWriter<E>> writers;
+  private final DatasetHandle rootHandle;
 
   public DatasetServer(Dataset<E> dataset) {
     datasets = new HashMap<DatasetHandle, Dataset<E>>();
     views = new HashMap<RefinableViewHandle, RefinableView<E>>();
     readers = new HashMap<DatasetReaderHandle, DatasetReader<E>>();
     writers = new HashMap<DatasetWriterHandle, DatasetWriter<E>>();
-    handleFactory = new HandleFactory();
 
     rootHandle = put(dataset);
     put((RefinableView<E>)dataset);
@@ -93,25 +94,26 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
   }
 
   protected final DatasetHandle put(Dataset<E> dataset) {
-    DatasetHandle handle = handleFactory.nextDatasetHandle();
+    DatasetHandle handle = HandleFactory.nextDatasetHandle();
+    handle.setUri(dataset.getUri().toString());
     datasets.put(handle, dataset);
     return handle;
   }
 
   protected final RefinableViewHandle put(RefinableView<E> view) {
-    RefinableViewHandle handle = handleFactory.nextRefinableViewHandle();
+    RefinableViewHandle handle = HandleFactory.nextRefinableViewHandle();
     views.put(handle, view);
     return handle;
   }
 
   protected DatasetReaderHandle put(DatasetReader<E> reader) {
-    DatasetReaderHandle handle = handleFactory.nextDatasetReaderHandle();
+    DatasetReaderHandle handle = HandleFactory.nextDatasetReaderHandle();
     readers.put(handle, reader);
     return handle;
   }
 
   protected DatasetWriterHandle put(DatasetWriter<E> writer) {
-    DatasetWriterHandle handle = handleFactory.nextDatasetWriterHandle();
+    DatasetWriterHandle handle = HandleFactory.nextDatasetWriterHandle();
     writers.put(handle, writer);
     return handle;
   }
@@ -129,22 +131,6 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
   @Override
   public DatasetDescriptor getDescriptor(DatasetHandle handle) {
     return get(handle).getDescriptor();
-  }
-
-  @Override
-  public DatasetHandle getPartition(DatasetHandle handle, PartitionKey key, boolean autoCreate) {
-    Dataset<E> partition = get(handle).getPartition(key, autoCreate);
-    return put(partition);
-  }
-
-  @Override
-  public void dropPartition(DatasetHandle handle, PartitionKey key) {
-    get(handle).dropPartition(key);
-  }
-
-  @Override
-  public Iterable<DatasetHandle> getPartitions(DatasetHandle handle) {
-    throw new UnsupportedOperationException("Not supported yet.");
   }
 
   @Override
@@ -207,11 +193,6 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
   }
 
   @Override
-  public void openReader(DatasetReaderHandle handle) {
-    get(handle).open();
-  }
-
-  @Override
   public boolean hasNext(DatasetReaderHandle handle) {
     return get(handle).hasNext();
   }
@@ -239,11 +220,6 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
   @Override
   public Iterator<E> iterator(DatasetReaderHandle handle) {
     return get(handle).iterator();
-  }
-
-  @Override
-  public void openWriter(DatasetWriterHandle handle) {
-    get(handle).open();
   }
 
   @Override
@@ -314,5 +290,15 @@ public class DatasetServer<E> implements RemoteDataProtocol<E> {
         throw ex;
       }
     }
+  }
+
+  @Override
+  public boolean isEmpty(RefinableViewHandle handle) {
+    return get(handle).isEmpty();
+  }
+
+  @Override
+  public void sync(DatasetWriterHandle handle) {
+    get(handle).sync();
   }
 }

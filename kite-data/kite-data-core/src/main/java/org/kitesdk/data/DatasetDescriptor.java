@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data;
 
+import org.kitesdk.data.spi.SchemaAsStringEncoding;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
@@ -45,6 +46,7 @@ import org.apache.avro.reflect.AvroEncode;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.hadoop.fs.Path;
 import org.kitesdk.data.spi.ColumnMappingParser;
+import org.kitesdk.data.spi.FormatAsString;
 import org.kitesdk.data.spi.HadoopFileSystemURLStreamHandler;
 import org.kitesdk.data.spi.PartitionStrategyParser;
 import org.kitesdk.data.spi.SchemaUtil;
@@ -70,6 +72,8 @@ public class DatasetDescriptor {
 
   @org.apache.avro.reflect.Nullable
   private final URL schemaUrl;
+
+  @AvroEncode(using=FormatAsString.class)
   private final Format format;
 
   @org.apache.avro.reflect.Nullable
@@ -95,6 +99,7 @@ public class DatasetDescriptor {
     properties = null;
     partitionStrategy = null;
     columnMappings = null;
+    compressionType = null;
   }
 
   /**

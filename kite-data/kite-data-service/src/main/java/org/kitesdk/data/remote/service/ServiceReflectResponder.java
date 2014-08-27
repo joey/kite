@@ -61,7 +61,7 @@ public class ServiceReflectResponder extends ReflectResponder {
   @Override
   @SuppressFBWarnings("DP_DO_INSIDE_DO_PRIVILEGED")
   public Object respond(Message message, Object request) throws Exception {
-        int numParams = message.getRequest().getFields().size();
+    int numParams = message.getRequest().getFields().size();
     Object[] params = new Object[numParams];
     Class[] paramTypes = new Class[numParams];
     int i = 0;

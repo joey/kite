@@ -18,6 +18,7 @@ package org.kitesdk.data.remote;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collection;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
@@ -25,58 +26,55 @@ import org.apache.avro.ipc.NettyTransceiver;
 import org.apache.avro.ipc.reflect.ReflectRequestor;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
-import org.kitesdk.data.DatasetRepository;
+import org.kitesdk.data.DatasetException;
+import org.kitesdk.data.spi.DatasetRepository;
 import org.kitesdk.data.remote.protocol.DatasetRepositoryProtocol;
 import org.kitesdk.data.remote.protocol.RemoteDataProtocol;
 import org.kitesdk.data.remote.protocol.handle.DatasetHandle;
+import org.kitesdk.data.remote.protocol.handle.DatasetRepositoryHandle;
 import org.kitesdk.data.remote.service.ServiceReflectData;
 
 public class RemoteDatasetRepository extends RemoteAvroClient implements DatasetRepository {
 
-  DatasetRepositoryProtocol proxy;
-  String hostname;
+  private final DatasetRepositoryProtocol proxy;
+  private final String hostname;
+  private final DatasetRepositoryHandle repoHandle;
+  private final URI uri;
 
-  public RemoteDatasetRepository(String hostname, int port) throws IOException {
+  public RemoteDatasetRepository(String hostname, int port, String remoteUri)
+      throws IOException {
     this.hostname = hostname;
     NettyTransceiver client = new NettyTransceiver(
         new InetSocketAddress(hostname, port));
     proxy = ReflectRequestor.getClient(DatasetRepositoryProtocol.class, client);
+    repoHandle = proxy.openRespository(remoteUri);
+
+    try {
+      this.uri = new URI("repo:remote://" + hostname + ':' + port + "/" + repoHandle.getUri());
+    } catch (URISyntaxException ex) {
+      throw new DatasetException(ex);
+    }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <E> Dataset<E> load(String name) {
-    try {
-      DatasetHandle handle = proxy.load(name);
-      return createDataset(handle);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    }
+    return (Dataset<E>) load(name, Object.class);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <E> Dataset<E> create(String name, DatasetDescriptor descriptor) {
-    try {
-      DatasetHandle handle = proxy.create(name, descriptor);
-      return createDataset(handle);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    }
+    return (Dataset<E>) create(name, descriptor, Object.class);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <E> Dataset<E> update(String name, DatasetDescriptor descriptor) {
-    try {
-      DatasetHandle handle = proxy.update(name, descriptor);
-      return createDataset(handle);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    }
+    return (Dataset<E>) update(name, descriptor, Object.class);
   }
 
-  private <E> Dataset<E> createDataset(DatasetHandle handle) {
+  private <E> Dataset<E> createDataset(DatasetHandle handle, Class<E> type) {
     try {
       String host = handle.getHostname() != null ? handle.getHostname()
           : hostname;
@@ -87,7 +85,7 @@ public class RemoteDatasetRepository extends RemoteAvroClient implements Dataset
       RemoteDataProtocol<E> datasetProxy = ReflectRequestor.getClient(
           RemoteDataProtocol.class, client,
           new ServiceReflectData(RemoteDataProtocol.class, schema));
-      return new RemoteDataset<E>(datasetProxy, handle, schema);
+      return new RemoteDataset<E>(datasetProxy, handle, schema, type);
     } catch (IOException ex) {
       throw new RuntimeException("IOException creating RemoteDataset", ex);
     }
@@ -96,7 +94,7 @@ public class RemoteDatasetRepository extends RemoteAvroClient implements Dataset
   @Override
   public boolean delete(String name) {
     try {
-      return proxy.delete(name);
+      return proxy.delete(repoHandle, name);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -106,7 +104,7 @@ public class RemoteDatasetRepository extends RemoteAvroClient implements Dataset
   @Override
   public boolean exists(String name) {
     try {
-      return proxy.exists(name);
+      return proxy.exists(repoHandle, name);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -116,7 +114,7 @@ public class RemoteDatasetRepository extends RemoteAvroClient implements Dataset
   @Override
   public Collection<String> list() {
     try {
-      return proxy.list();
+      return proxy.list(repoHandle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
       throw ex;
@@ -125,6 +123,39 @@ public class RemoteDatasetRepository extends RemoteAvroClient implements Dataset
 
   @Override
   public URI getUri() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    return uri;
+  }
+
+  @Override
+  public <E> Dataset<E> load(String name, Class<E> type) {
+    try {
+      DatasetHandle handle = proxy.load(repoHandle, name);
+      return createDataset(handle, type);
+    } catch (AvroRuntimeException ex) {
+      handleAvroRuntimeException(ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public <E> Dataset<E> create(String name, DatasetDescriptor descriptor, Class<E> type) {
+    try {
+      DatasetHandle handle = proxy.create(repoHandle, name, descriptor);
+      return createDataset(handle, type);
+    } catch (AvroRuntimeException ex) {
+      handleAvroRuntimeException(ex);
+      throw ex;
+    }
+  }
+
+  @Override
+  public <E> Dataset<E> update(String name, DatasetDescriptor descriptor, Class<E> type) {
+    try {
+      DatasetHandle handle = proxy.update(repoHandle, name, descriptor);
+      return createDataset(handle, type);
+    } catch (AvroRuntimeException ex) {
+      handleAvroRuntimeException(ex);
+      throw ex;
+    }
   }
 }

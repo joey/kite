@@ -16,12 +16,10 @@
 package org.kitesdk.data.remote;
 
 import java.io.IOException;
-import java.util.Iterator;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
-import org.kitesdk.data.PartitionKey;
 import org.kitesdk.data.remote.protocol.RemoteDataProtocol;
 import org.kitesdk.data.remote.protocol.handle.DatasetHandle;
 import org.slf4j.LoggerFactory;
@@ -31,16 +29,15 @@ public class RemoteDataset<E> extends RemoteRefinableView<E> implements Dataset<
   private static final org.slf4j.Logger LOG =
       LoggerFactory.getLogger(RemoteDataset.class);
 
-  private RemoteDataProtocol<E> proxy;
-  private DatasetHandle handle;
-  private Schema type;
+  private final RemoteDataProtocol<E> proxy;
+  private final DatasetHandle handle;
 
   @SuppressWarnings("unchecked")
-  public RemoteDataset(RemoteDataProtocol<E> proxy, DatasetHandle handle, Schema type) throws IOException {
-    super(proxy, handle, type);
+  public RemoteDataset(RemoteDataProtocol<E> proxy, DatasetHandle handle,
+      Schema schema, Class<E> type) throws IOException {
+    super(proxy, handle, schema, type);
     this.proxy = proxy;
     this.handle = handle;
-    this.type = type;
   }
 
   @Override
@@ -62,71 +59,4 @@ public class RemoteDataset<E> extends RemoteRefinableView<E> implements Dataset<
       throw ex;
     }
   }
-
-  @Override
-  public Dataset<E> getPartition(PartitionKey key, boolean autoCreate) {
-    try {
-      DatasetHandle partitionHandle = proxy.getPartition(handle, key, autoCreate);
-      return new RemoteDataset<E>(proxy, partitionHandle, type);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    } catch (IOException ex) {
-      throw new RuntimeException("IOException while creating Dataset",ex);
-    }
-  }
-
-  @Override
-  public void dropPartition(PartitionKey key) {
-    try {
-      proxy.dropPartition(handle, key);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    }
-  }
-
-  @Override
-  public Iterable<Dataset<E>> getPartitions() {
-    try {
-      final Iterable<DatasetHandle> partitions = proxy.getPartitions(handle);
-      return new Iterable<Dataset<E>>() {
-
-        @Override
-        public Iterator<Dataset<E>> iterator() {
-          final Iterator<DatasetHandle> iterator = partitions.iterator();
-
-          return new Iterator<Dataset<E>>() {
-
-            @Override
-            public boolean hasNext() {
-              return iterator.hasNext();
-            }
-
-            @Override
-            public Dataset<E> next() {
-              DatasetHandle partition = iterator.next();
-              if (partition == null) {
-                return null;
-              }
-              try {
-                return new RemoteDataset<E>(proxy, partition, type);
-              } catch (IOException ex) {
-                throw new RuntimeException("IOException while creating Dataset", ex);
-              }
-            }
-
-            @Override
-            public void remove() {
-              iterator.remove();
-            }
-          };
-        }
-      };
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex;
-    }
-  }
-
 }

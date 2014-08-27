@@ -18,7 +18,6 @@ package org.kitesdk.data.remote.protocol;
 import org.kitesdk.data.remote.protocol.handle.DatasetHandle;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
-import org.kitesdk.data.PartitionKey;
 
 /**
  * Protocol for remote {@link Dataset}s.
@@ -37,18 +36,4 @@ public interface DatasetProtocol<E> extends RefinableViewProtocol<E> {
    */
   DatasetDescriptor getDescriptor(DatasetHandle handle);
 
-  /**
-   * @see Dataset#getPartition(org.kitesdk.data.PartitionKey, boolean)
-   */
-  DatasetHandle getPartition(DatasetHandle handle, PartitionKey key, boolean autoCreate);
-
-  /**
-   * @see Dataset#dropPartition(org.kitesdk.data.PartitionKey)
-   */
-  void dropPartition(DatasetHandle handle, PartitionKey key);
-
-  /**
-   * @see Dataset#getPartitions()
-   */
-  Iterable<DatasetHandle> getPartitions(DatasetHandle handle);
 }

@@ -19,6 +19,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
+import org.apache.avro.reflect.AvroEncode;
+import org.kitesdk.data.spi.FormatAsString;
 
 /**
  * <p>
@@ -52,6 +54,8 @@ public class Format {
    */
   private Format() {
     name = null;
+    defaultCompressionType = null;
+    supportedCompressionTypes = null;
   }
 
   /**

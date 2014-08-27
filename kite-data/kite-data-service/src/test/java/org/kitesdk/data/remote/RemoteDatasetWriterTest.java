@@ -58,7 +58,7 @@ public class RemoteDatasetWriterTest {
     RemoteDataProtocol<User> proxy = ReflectRequestor.getClient(
         RemoteDataProtocol.class, client,
         new ServiceReflectData(RemoteDataProtocol.class, schema));
-    dataset = new RemoteDataset<User>(proxy, proxy.getRootHandle(), schema);
+    dataset = new RemoteDataset<User>(proxy, proxy.getRootHandle(), schema, User.class);
   }
   
   @After
@@ -67,9 +67,9 @@ public class RemoteDatasetWriterTest {
   }
 
   @Test
-  public void testIsOpenOnNonOpenWriter() {
+  public void testIsOpen() {
     DatasetWriter<User> instance = dataset.newWriter(); 
-    boolean expResult = false;
+    boolean expResult = true;
     boolean result = instance.isOpen();
     assertEquals(expResult, result);
   }

@@ -60,7 +60,7 @@ public class RemoteDatasetReaderTest extends TestDatasetReaders {
         RemoteDataProtocol.class, client,
         new ServiceReflectData(RemoteDataProtocol.class, schema));
     RemoteDataset<User> remoteDataset = new RemoteDataset<User>(proxy,
-        proxy.getRootHandle(), schema);
+        proxy.getRootHandle(), schema, User.class);
     return remoteDataset.newReader();
   }
 

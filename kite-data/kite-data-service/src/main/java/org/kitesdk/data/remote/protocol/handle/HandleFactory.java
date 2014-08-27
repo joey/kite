@@ -20,37 +20,37 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class HandleFactory {
 
-  AtomicLong lastDatasetId;
-  AtomicLong lastRefinableViewId;
-  AtomicLong lastDatasetReaderId;
-  AtomicLong lastDatasetWriterId;
+  private static final AtomicLong lastDatasetRepositoryId = new AtomicLong(0);
+  private static final AtomicLong lastDatasetId = new AtomicLong(0);
+  private static final AtomicLong lastRefinableViewId = new AtomicLong(0);
+  private static final AtomicLong lastDatasetReaderId = new AtomicLong(0);
+  private static final AtomicLong lastDatasetWriterId = new AtomicLong(0);
 
-  public HandleFactory() {
-    lastDatasetId = new AtomicLong(0);
-    lastRefinableViewId = new AtomicLong(0);
-    lastDatasetReaderId = new AtomicLong(0);
-    lastDatasetWriterId = new AtomicLong(0);
+  public static DatasetRepositoryHandle nextDatasetRepositoryHandle() {
+    DatasetRepositoryHandle handle = new DatasetRepositoryHandle();
+    handle.setId(lastDatasetRepositoryId.incrementAndGet());
+    return handle;
   }
 
-  public DatasetHandle nextDatasetHandle() {
+  public static DatasetHandle nextDatasetHandle() {
     DatasetHandle handle = new DatasetHandle();
     handle.setId(lastDatasetId.incrementAndGet());
     return handle;
   }
 
-  public RefinableViewHandle nextRefinableViewHandle() {
+  public static RefinableViewHandle nextRefinableViewHandle() {
     RefinableViewHandle handle = new RefinableViewHandle();
     handle.setId(lastRefinableViewId.incrementAndGet());
     return handle;
   }
 
-  public DatasetReaderHandle nextDatasetReaderHandle() {
+  public static DatasetReaderHandle nextDatasetReaderHandle() {
     DatasetReaderHandle handle = new DatasetReaderHandle();
     handle.setId(lastDatasetReaderId.incrementAndGet());
     return handle;
   }
   
-  public DatasetWriterHandle nextDatasetWriterHandle() {
+  public static DatasetWriterHandle nextDatasetWriterHandle() {
     DatasetWriterHandle handle = new DatasetWriterHandle();
     handle.setId(lastDatasetWriterId.incrementAndGet());
     return handle;

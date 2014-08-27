@@ -28,8 +28,8 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
   private static final org.slf4j.Logger LOG = LoggerFactory
     .getLogger(RemoteDatasetWriter.class);
 
-  private RemoteDataProtocol<E> proxy;
-  private DatasetWriterHandle handle;
+  private final RemoteDataProtocol<E> proxy;
+  private final DatasetWriterHandle handle;
 
   @SuppressWarnings("unchecked")
   public RemoteDatasetWriter(RemoteDataProtocol<E> proxy, DatasetWriterHandle handle) throws IOException {
@@ -38,22 +38,12 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
   }
 
   @Override
-  public void open() {
-    try {
-      proxy.openWriter(handle);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex; 
-    }
-  }
-
-  @Override
   public void write(E entity) {
     try {
       proxy.write(handle, entity);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
-      throw ex; 
+      throw ex;
     }
   }
 
@@ -63,7 +53,7 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
       proxy.flush(handle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
-      throw ex; 
+      throw ex;
     }
   }
 
@@ -74,7 +64,7 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
       proxy.closeWriter(handle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
-      throw ex; 
+      throw ex;
     }
   }
 
@@ -84,7 +74,17 @@ public class RemoteDatasetWriter<E> extends RemoteAvroClient implements DatasetW
       return proxy.isWriterOpen(handle);
     } catch (AvroRuntimeException ex) {
       handleAvroRuntimeException(ex);
-      throw ex; 
+      throw ex;
+    }
+  }
+
+  @Override
+  public void sync() {
+    try {
+      proxy.sync(handle);
+    } catch (AvroRuntimeException ex) {
+      handleAvroRuntimeException(ex);
+      throw ex;
     }
   }
 }

@@ -29,23 +29,13 @@ public class RemoteDatasetReader<E> extends RemoteAvroClient implements DatasetR
   private static final org.slf4j.Logger LOG = LoggerFactory
     .getLogger(RemoteDatasetReader.class);
 
-  private RemoteDataProtocol<E> proxy;
-  private DatasetReaderHandle handle;
+  private final RemoteDataProtocol<E> proxy;
+  private final DatasetReaderHandle handle;
 
   @SuppressWarnings("unchecked")
   public RemoteDatasetReader(RemoteDataProtocol<E> proxy, DatasetReaderHandle handle) throws IOException {
     this.proxy = proxy;
     this.handle = handle;
-  }
-
-  @Override
-  public void open() {
-    try {
-      proxy.openReader(handle);
-    } catch (AvroRuntimeException ex) {
-      handleAvroRuntimeException(ex);
-      throw ex; 
-    }
   }
 
   @Override

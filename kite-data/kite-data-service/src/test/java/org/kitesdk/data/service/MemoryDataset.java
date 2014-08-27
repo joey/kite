@@ -17,10 +17,16 @@
 package org.kitesdk.data.service;
 
 import com.google.common.base.Preconditions;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.kitesdk.data.*;
+import org.kitesdk.data.DatasetDescriptor;
+import org.kitesdk.data.DatasetException;
+import org.kitesdk.data.DatasetReader;
+import org.kitesdk.data.DatasetWriter;
+import org.kitesdk.data.RefinableView;
 import org.kitesdk.data.spi.AbstractDataset;
 import org.kitesdk.data.spi.AbstractDatasetReader;
 import org.kitesdk.data.spi.AbstractRefinableView;
@@ -28,17 +34,25 @@ import org.kitesdk.data.spi.Constraints;
 
 public class MemoryDataset<E> extends AbstractDataset<E> {
 
-  private List<E> data;
-  private String name;
-  private DatasetDescriptor descriptor;
+  private final List<E> data;
+  private final String name;
+  private final DatasetDescriptor descriptor;
+  private final URI uri;
 
-  MemoryDataset(String name, DatasetDescriptor descriptor, List<E> data) {
+  MemoryDataset(String name, DatasetDescriptor descriptor, List<E> data,
+      Class<E> type) {
+    super(type, descriptor.getSchema());
     this.name = name;
     this.descriptor = descriptor;
 
     this.data = new ArrayList<E>();
     if (data != null) {
       this.data.addAll(data);
+    }
+    try {
+      uri = new URI("dataset:memory:/"+this.hashCode());
+    } catch (URISyntaxException ex) {
+      throw new DatasetException(ex);
     }
   }
 
@@ -63,21 +77,6 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
   }
 
   @Override
-  public Dataset<E> getPartition(PartitionKey key, boolean autoCreate) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public void dropPartition(PartitionKey key) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public Iterable<Dataset<E>> getPartitions() {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
   public DatasetReader<E> newReader() {
     return new MemoryDatasetReader();
   }
@@ -87,10 +86,21 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
     return new MemoryDatasetWriter();
   }
 
+  @Override
+  public URI getUri() {
+    return uri;
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return data.isEmpty();
+  }
+
   public static class Builder {
     private String name;
     private DatasetDescriptor descriptor;
     private List data;
+    private Class type;
 
     public Builder name(String name) {
       this.name = name;
@@ -107,26 +117,27 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
       return this;
     }
 
+    public Builder type(Class type) {
+      this.type = type;
+      return this;
+    }
+
     @SuppressWarnings("unchecked")
     public <E> MemoryDataset<E> build() {
       Preconditions.checkState(this.name != null, "No dataset name defined");
       Preconditions.checkState(this.descriptor != null,
         "No dataset descriptor defined");
 
-      return new MemoryDataset<E>(name, descriptor, data);
+      return new MemoryDataset<E>(name, descriptor, data, type);
     }
   }
 
   private class MemoryDatasetReader extends AbstractDatasetReader<E> {
 
     private boolean open = false;
-    private Iterator<E> iterator;
+    private final Iterator<E> iterator;
 
-    @Override
-    public void open() {
-      if (open) {
-        throw new IllegalStateException("Attempting to open an already open Reader");
-      }
+    public MemoryDatasetReader() {
       open = true;
       iterator = data.iterator();
     }
@@ -154,16 +165,15 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
     public boolean isOpen() {
       return open;
     }
+
+    @Override
+    public void initialize() {
+    }
   }
 
   private class MemoryDatasetWriter implements DatasetWriter<E> {
 
-    private boolean open = false;
-
-    @Override
-    public void open() {
-      open = true;
-    }
+    private boolean open = true;
 
     @Override
     public void write(E entity) {
@@ -186,6 +196,12 @@ public class MemoryDataset<E> extends AbstractDataset<E> {
     @Override
     public boolean isOpen() {
       return open;
+    }
+
+    @Override
+    public void sync() {
+      Preconditions.checkArgument(open, "Attempting to write to "
+          + "MemoryDatasetWriter without call to open()");
     }
   }
 }

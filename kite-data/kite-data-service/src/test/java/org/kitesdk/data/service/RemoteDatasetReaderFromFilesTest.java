@@ -15,40 +15,44 @@
  */
 package org.kitesdk.data.service;
 
-import static org.kitesdk.data.service.RemoteDatasetTestUtilities.*;
-
 import com.google.common.base.Preconditions;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.net.URI;
 import org.apache.avro.ipc.NettyServer;
 import org.junit.*;
-import org.kitesdk.data.*;
-import org.kitesdk.data.remote.RemoteDatasetRepository;
+import org.kitesdk.data.Dataset;
+import org.kitesdk.data.DatasetDescriptor;
+import org.kitesdk.data.DatasetReader;
+import org.kitesdk.data.DatasetWriter;
+import org.kitesdk.data.Datasets;
+import org.kitesdk.data.TestDatasetReaders;
 import org.kitesdk.data.remote.service.DatasetRepositoryServer;
+import static org.kitesdk.data.service.RemoteDatasetTestUtilities.*;
+import org.kitesdk.data.spi.DatasetRepositories;
+import org.kitesdk.data.spi.DatasetRepository;
 import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
 
 public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
 
   static NettyServer server;
   static final int port = 42424;
-  static DatasetRepository repository;
+  static final String datasetUri = "dataset:remote://localhost:"+port+"/dataset:file:/tmp/data/users";
+  static final String repoUri = "repo:remote://localhost:"+port+"/repo:file:///tmp/data";
 
   @BeforeClass
   public static void setUpClass() throws IOException {
-    server = DatasetRepositoryServer.startServer("repo:file:///tmp/data", port);
+    server = DatasetRepositoryServer.startServer(port);
 
-    repository = new RemoteDatasetRepository("localhost", port);
     DatasetDescriptor descriptor = new DatasetDescriptor.Builder()
         .schema(User.class)
         .build();
-    if (repository.exists("users")) {
-      repository.delete("users");
+
+    if (Datasets.exists(datasetUri)) {
+      Datasets.delete(datasetUri);
     }
-    Dataset<User> users = repository.create("users", descriptor);
+    Dataset<User> users = Datasets.create(datasetUri, descriptor, User.class);
     DatasetWriter<User> writer = users.newWriter();
     try {
-      writer.open();
       for (User user : data) {
         writer.write(user);
       }
@@ -62,9 +66,16 @@ public class RemoteDatasetReaderFromFilesTest extends TestDatasetReaders {
     server.close();
   }
 
+  @Test
+  public void testUri() {
+    DatasetRepository repository = DatasetRepositories.repositoryFor(datasetUri);
+    Assert.assertEquals("Repository URI doesn't match", URI.create(repoUri),
+        repository.getUri());
+  }
+
   @Override
   public DatasetReader newReader() throws IOException {
-    Dataset<User> dataset = repository.load("users");
+    Dataset<User> dataset = Datasets.load(datasetUri, User.class);
     return dataset.newReader();
   }
 

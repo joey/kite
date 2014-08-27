@@ -52,12 +52,8 @@ public class RemoteDatasetTestUtilities {
 
   public static <E> void checkWriterBehavior(DatasetWriter<E> writer,
       Collection<E> data) {
-    Assert.assertFalse("Writer is open before open()", writer.isOpen());
-
     try {
-      writer.open();
-
-      Assert.assertTrue("Writer is not open after open()", writer.isOpen());
+      Assert.assertTrue("Writer is not open", writer.isOpen());
 
       for (E entity : data) {
         writer.write(entity);

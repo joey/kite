@@ -27,11 +27,6 @@ import org.kitesdk.data.DatasetReader;
 public interface DatasetReaderProtocol<E> {
 
   /**
-   * @see DatasetReader#open()
-   */
-  public void openReader(DatasetReaderHandle handle);
-
-  /**
    * @see DatasetReader#hasNext()
    */
   public boolean hasNext(DatasetReaderHandle handle);
