@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 Cloudera Inc.
+ * Copyright 2014 Cloudera Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,86 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kitesdk.data;
+package org.kitesdk.data.impl;
 
 import com.google.common.base.Objects;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import org.kitesdk.data.DatasetIOException;
+import org.kitesdk.data.FieldMapping;
 import org.kitesdk.data.spi.ColumnMappingParser;
 
 /**
  * Represents how to store a Schema field.
  *
- * @since 0.14.0
+ * @since 0.18.0
  */
 @Immutable
-public class FieldMapping {
-
-  /**
-   * The supported Mapping Types, which control how an entity field maps to
-   * columns in an HBase table.
-   *
-   * @since 0.14.0
-   */
-  public static enum MappingType {
-
-    // Maps a value to a part of the row key
-    KEY,
-
-    // Maps a value to a single column.
-    COLUMN,
-
-    // Maps a map or record value to columns
-    // in a column family.
-    KEY_AS_COLUMN,
-
-    // Maps a field to one that can be incremented
-    COUNTER,
-
-    // The field will be populated with the
-    // current version of the entity. This
-    // allows the version to be checked if this
-    // same entity is persisted back, to make sure
-    // it hasn't changed.
-    OCC_VERSION
-  }
-
-  private static String SYS_COL_FAMILY = "_s";
-  private static String OCC_QUALIFIER = "w";
-
-  public static FieldMapping key(String name) {
-    return new FieldMapping(name, MappingType.KEY, null, null, null);
-  }
-
-  public static FieldMapping column(String name, String family, String qualifier) {
-    return new FieldMapping(name, MappingType.COLUMN, family, qualifier, null);
-  }
-
-  public static FieldMapping keyAsColumn(String name, String family) {
-    return new FieldMapping(
-        name, MappingType.KEY_AS_COLUMN, family, null, null);
-  }
-
-  public static FieldMapping keyAsColumn(String name, String family,
-                                         @Nullable String qualifierPrefix) {
-    return new FieldMapping(
-        name, MappingType.KEY_AS_COLUMN, family, null, qualifierPrefix);
-  }
-
-  public static FieldMapping counter(String name, String family, String qualifier) {
-    return new FieldMapping(name, MappingType.COUNTER, family, qualifier, null);
-  }
-
-  public static FieldMapping occ(String name) {
-    return new FieldMapping(
-        name, MappingType.OCC_VERSION, SYS_COL_FAMILY, OCC_QUALIFIER, null);
-  }
-
-  public static FieldMapping version(String name) {
-    return occ(name);
-  }
+public class FieldMappingImpl extends FieldMapping {
 
   private final String fieldName;
   private final MappingType mappingType;
@@ -102,7 +40,7 @@ public class FieldMapping {
   private final String qualifierString;
   private final byte[] qualifier;
 
-  private FieldMapping(String fieldName, MappingType mappingType,
+  private FieldMappingImpl(String fieldName, MappingType mappingType,
       @Nullable String family, @Nullable String qualifier,
       @Nullable String prefix) {
     this.fieldName = fieldName;
@@ -126,14 +64,17 @@ public class FieldMapping {
     }
   }
 
+  @Override
   public String getFieldName() {
     return fieldName;
   }
 
+  @Override
   public MappingType getMappingType() {
     return mappingType;
   }
 
+  @Override
   public String getPrefix() {
     return prefix;
   }
@@ -141,10 +82,12 @@ public class FieldMapping {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="EI_EXPOSE_REP",
       justification="Defensive copy is needlessly expensive")
+  @Override
   public byte[] getFamily() {
     return family;
   }
 
+  @Override
   public String getFamilyAsString() {
     return familyString;
   }
@@ -152,10 +95,12 @@ public class FieldMapping {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="EI_EXPOSE_REP",
       justification="Defensive copy is needlessly expensive")
+  @Override
   public byte[] getQualifier() {
     return qualifier;
   }
 
+  @Override
   public String getQualifierAsString() {
     return qualifierString;
   }
@@ -186,7 +131,7 @@ public class FieldMapping {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    FieldMapping other = (FieldMapping) obj;
+    FieldMappingImpl other = (FieldMappingImpl) obj;
     return (Objects.equal(fieldName, other.fieldName) &&
         Objects.equal(mappingType, other.mappingType) &&
         Arrays.equals(family, other.family) &&
@@ -197,5 +142,16 @@ public class FieldMapping {
   @Override
   public String toString() {
     return ColumnMappingParser.toString(this);
+  }
+
+  static final class FieldMappingImplFactory implements FieldMappingFactory {
+
+    @Override
+    public FieldMapping newFieldMapping(String fieldName,
+        MappingType mappingType, @Nullable String family,
+        @Nullable String qualifier, @Nullable String prefix) {
+      return new FieldMappingImpl(fieldName, mappingType, family, qualifier, prefix);
+    }
+
   }
 }

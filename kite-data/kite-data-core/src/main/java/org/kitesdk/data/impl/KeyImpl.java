@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kitesdk.data;
+package org.kitesdk.data.impl;
 
 import org.apache.avro.Schema;
 import org.kitesdk.data.spi.Conversions;
@@ -25,6 +25,9 @@ import com.google.common.collect.Sets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.kitesdk.data.Key;
+import org.kitesdk.data.PartitionStrategy;
+import org.kitesdk.data.RandomAccessDataset;
 import org.kitesdk.data.spi.FieldPartitioner;
 import org.kitesdk.data.spi.SchemaUtil;
 
@@ -35,11 +38,11 @@ import org.kitesdk.data.spi.SchemaUtil;
  *
  * @since 0.9.0
  */
-public class Key {
+public class KeyImpl extends Key {
 
   private final List<Object> values;
 
-  Key(List<Object> values) {
+  KeyImpl(List<Object> values) {
     this.values = values;
   }
 
@@ -60,8 +63,8 @@ public class Key {
 
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof Key) {
-      return Objects.equal(values, ((Key) obj).values);
+    if (obj instanceof KeyImpl) {
+      return Objects.equal(values, ((KeyImpl) obj).values);
     } else {
       return false;
     }
@@ -77,11 +80,11 @@ public class Key {
    *
    * @since 0.9.0
    */
-  public static class Builder {
+  public static class Builder extends Key.Builder {
 
-    private Schema schema;
-    private PartitionStrategy strategy;
-    private Set<String> fieldNames;
+    private final Schema schema;
+    private final PartitionStrategy strategy;
+    private final Set<String> fieldNames;
     private final Map<String, Object> values;
 
     /**
@@ -118,13 +121,14 @@ public class Key {
      * @throws IllegalStateException If any required key field is missing.
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Key build() {
       final List<FieldPartitioner> partitioners = strategy.getFieldPartitioners();
       final List<Object> content = Lists.newArrayListWithCapacity(partitioners.size());
       for (FieldPartitioner fp : partitioners) {
         content.add(valueFor(fp));
       }
-      return new Key(content);
+      return new KeyImpl(content);
     }
 
     @SuppressWarnings("unchecked")
@@ -141,6 +145,15 @@ public class Key {
         throw new IllegalStateException(
             "Cannot create Key, missing data for field:" + fp.getName());
       }
+    }
+
+    static class KeyImplBuilderFactory implements KeyBuilderFactory {
+
+      @Override
+      public Key.Builder newKeyBuilder(RandomAccessDataset dataset) {
+        return new Builder(dataset);
+      }
+
     }
   }
 }

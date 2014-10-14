@@ -115,6 +115,12 @@
   </reporting>
 
   <dependencies>
+    <!-- Kite Data API -->
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-api</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+    </dependency>
     <!-- Hadoop -->
     <dependency>
       <groupId>org.kitesdk</groupId>

@@ -15,15 +15,13 @@
  */
 package org.kitesdk.data;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.ServiceLoader;
 import java.util.Set;
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import org.kitesdk.data.spi.ColumnMappingParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A descriptor for an entity's column mappings, which defines how an entity
@@ -32,82 +30,30 @@ import org.kitesdk.data.spi.ColumnMappingParser;
  * @since 0.14.0
  */
 @Immutable
-public class ColumnMapping {
+public abstract class ColumnMapping {
 
-  private final Collection<FieldMapping> fieldMappings;
+  private static final Logger LOG = LoggerFactory.getLogger(ColumnMapping.class);
 
-  private ColumnMapping(Collection<FieldMapping> mappings) {
-    fieldMappings = ImmutableList.copyOf(mappings);
-  }
+  public abstract Collection<FieldMapping> getFieldMappings();
 
-  public Collection<FieldMapping> getFieldMappings() {
-    return fieldMappings;
-  }
-
-  public FieldMapping getFieldMapping(String fieldName) {
-    for (FieldMapping fm : fieldMappings) {
-      if (fm.getFieldName().equals(fieldName)) {
-        return fm;
-      }
-    }
-    return null;
-  }
+  public abstract FieldMapping getFieldMapping(String fieldName);
 
   /**
    * Get the columns required by this schema.
    *
    * @return The set of columns
    */
-  public Set<String> getRequiredColumns() {
-    Set<String> set = new HashSet<String>();
-    for (FieldMapping fieldMapping : fieldMappings) {
-      if (FieldMapping.MappingType.KEY == fieldMapping.getMappingType()) {
-        continue;
-      } else if (FieldMapping.MappingType.KEY_AS_COLUMN == fieldMapping.getMappingType()) {
-        set.add(fieldMapping.getFamilyAsString() + ":");
-      } else {
-        set.add(fieldMapping.getFamilyAsString() + ":"
-            + fieldMapping.getQualifierAsString());
-      }
-    }
-    return set;
-  }
+  public abstract Set<String> getRequiredColumns();
 
   /**
    * Get the column families required by this schema.
    *
    * @return The set of column families.
    */
-  public Set<String> getRequiredColumnFamilies() {
-    Set<String> set = new HashSet<String>();
-    for (FieldMapping mapping : fieldMappings) {
-      if (FieldMapping.MappingType.KEY != mapping.getMappingType())
-      set.add(mapping.getFamilyAsString());
-    }
-    return set;
-  }
+  public abstract Set<String> getRequiredColumnFamilies();
 
-  @Override
-  public boolean equals(@Nullable Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    ColumnMapping that = (ColumnMapping) o;
-    return Objects.equal(fieldMappings, that.fieldMappings);
-  }
 
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(fieldMappings.hashCode());
-  }
-
-  @Override
-  public String toString() {
-    return ColumnMappingParser.toString(this, false);
-  }
-
-  public String toString(boolean pretty) {
-    return ColumnMappingParser.toString(this, pretty);
-  }
+  public abstract String toString(boolean pretty);
 
   /**
    * A fluent builder to aid in constructing a {@link ColumnMapping}.
@@ -271,7 +217,7 @@ public class ColumnMapping {
      * @return a ColumnMapping
      */
     public ColumnMapping build() {
-      return new ColumnMapping(fieldMappings);
+      return COLUMN_MAPPING_FACTORY.newColumnMapping(fieldMappings);
     }
 
     /**
@@ -301,6 +247,33 @@ public class ColumnMapping {
       }
       fieldMappings.add(fm);
     }
+  }
+
+  private final static ColumnMappingFactory COLUMN_MAPPING_FACTORY;
+
+  protected static interface ColumnMappingFactory {
+
+    public ColumnMapping newColumnMapping(Collection<FieldMapping> fieldMappings);
+
+  }
+
+  static {
+    ServiceLoader<ColumnMappingFactory> factories =
+        ServiceLoader.load(ColumnMappingFactory.class);
+
+    ColumnMappingFactory selectedFactory = null;
+    for (ColumnMappingFactory factory : factories) {
+      LOG.debug("Using {} to build ColumnMapping objects", factory.getClass());
+      selectedFactory = factory;
+      break;
+    }
+
+    if (selectedFactory == null) {
+      throw new RuntimeException("No implementation of " + ColumnMapping.class +
+          " available. Make sure that kite-data-common is on the classpath");
+    }
+
+    COLUMN_MAPPING_FACTORY = selectedFactory;
   }
 
 }

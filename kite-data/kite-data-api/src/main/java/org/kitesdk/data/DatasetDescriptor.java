@@ -15,43 +15,19 @@
  */
 package org.kitesdk.data;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
-import com.google.common.io.Resources;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.ServiceLoader;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.file.DataFileStream;
-import org.apache.avro.generic.GenericDatumReader;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.reflect.ReflectData;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.kitesdk.data.spi.ColumnMappingParser;
-import org.kitesdk.data.spi.DefaultConfiguration;
-import org.kitesdk.data.spi.FieldPartitioner;
-import org.kitesdk.data.spi.HadoopFileSystemURLStreamHandler;
-import org.kitesdk.data.spi.PartitionStrategyParser;
-import org.kitesdk.data.spi.SchemaUtil;
-import org.kitesdk.data.spi.partition.IdentityFieldPartitioner;
-import org.kitesdk.data.spi.partition.ProvidedFieldPartitioner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>
@@ -67,15 +43,9 @@ import org.kitesdk.data.spi.partition.ProvidedFieldPartitioner;
 @Immutable
 public class DatasetDescriptor {
 
-  private final Schema schema;
-  private final URL schemaUrl;
-  private final URI schemaUri;
-  private final Format format;
-  private final URI location;
-  private final Map<String, String> properties;
-  private final PartitionStrategy partitionStrategy;
-  private final ColumnMapping columnMappings;
-  private final CompressionType compressionType;
+  private static final Logger LOG = LoggerFactory.getLogger(DatasetDescriptor.class);
+
+  private final DatasetDescriptor delegate;
 
   /**
    * Create an instance of this class with the supplied {@link Schema},
@@ -85,8 +55,8 @@ public class DatasetDescriptor {
   public DatasetDescriptor(Schema schema, @Nullable URL schemaUrl, Format format,
       @Nullable URI location, @Nullable Map<String, String> properties,
       @Nullable PartitionStrategy partitionStrategy) {
-    this(schema, schemaUrl, format, location, properties, partitionStrategy,
-        null);
+    delegate = DATASET_DESCRIPTOR_FACTORY.newDatasetDescriptor(schema, schemaUrl,
+        format, location, properties, partitionStrategy);
   }
 
   /**
@@ -101,8 +71,8 @@ public class DatasetDescriptor {
       @Nullable Map<String, String> properties,
       @Nullable PartitionStrategy partitionStrategy,
       @Nullable ColumnMapping columnMapping) {
-    this(schema, toURI(schemaUrl), format, location,
-        properties, partitionStrategy, columnMapping, null);
+    delegate = DATASET_DESCRIPTOR_FACTORY.newDatasetDescriptor(schema, schemaUrl,
+        format, location, properties, partitionStrategy, columnMapping);
   }
 
   /**
@@ -119,28 +89,16 @@ public class DatasetDescriptor {
       @Nullable PartitionStrategy partitionStrategy,
       @Nullable ColumnMapping columnMapping,
       @Nullable CompressionType compressionType) {
-    // URI can be null if the descriptor is configuring a new Dataset
-    Preconditions.checkArgument(
-        (location == null) || (location.getScheme() != null),
-        "Location URIs must be fully-qualified and have a FS scheme.");
-    checkCompressionType(format, compressionType);
+    delegate = DATASET_DESCRIPTOR_FACTORY.newDatasetDescriptor(schema, schemaUri,
+        format, location, properties, partitionStrategy, columnMapping,
+        compressionType);
+  }
 
-    this.schema = schema;
-    this.schemaUri = schemaUri;
-    this.schemaUrl = toURL(schemaUri);
-    this.format = format;
-    this.location = location;
-    if (properties != null) {
-      this.properties = ImmutableMap.copyOf(properties);
-    } else {
-      this.properties = ImmutableMap.of();
-    }
-    this.partitionStrategy = partitionStrategy;
-    this.columnMappings = columnMapping;
-
-    // if no compression format is present, get the default from the format
-    this.compressionType = compressionType == null ?
-        this.format.getDefaultCompressionType() : compressionType;
+  /**
+   * No argument constructor for sub-classes
+   */
+  protected DatasetDescriptor() {
+    delegate = null;
   }
 
   /**
@@ -153,7 +111,7 @@ public class DatasetDescriptor {
    * @return the schema
    */
   public Schema getSchema() {
-    return schema;
+    return delegate.getSchema();
   }
 
   /**
@@ -166,7 +124,7 @@ public class DatasetDescriptor {
    */
   @Nullable
   public URL getSchemaUrl() {
-    return schemaUrl;
+    return delegate.getSchemaUrl();
   }
 
   /**
@@ -176,7 +134,7 @@ public class DatasetDescriptor {
    * @since 0.2.0
    */
   public Format getFormat() {
-    return format;
+    return delegate.getFormat();
   }
 
   /**
@@ -189,7 +147,7 @@ public class DatasetDescriptor {
    */
   @Nullable
   public URI getLocation() {
-    return location;
+    return delegate.getLocation();
   }
 
   /**
@@ -202,7 +160,7 @@ public class DatasetDescriptor {
    */
   @Nullable
   public String getProperty(String name) {
-    return properties.get(name);
+    return delegate.getProperty(name);
   }
 
   /**
@@ -214,7 +172,7 @@ public class DatasetDescriptor {
    * @since 0.8.0
    */
   public boolean hasProperty(String name) {
-    return properties.containsKey(name);
+    return delegate.hasProperty(name);
   }
 
   /**
@@ -225,7 +183,7 @@ public class DatasetDescriptor {
    * @since 0.8.0
    */
   public Collection<String> listProperties() {
-    return properties.keySet();
+    return delegate.listProperties();
   }
 
   /**
@@ -234,13 +192,7 @@ public class DatasetDescriptor {
    * {@link #isPartitioned()} method prior to invocation.
    */
   public PartitionStrategy getPartitionStrategy() {
-    Preconditions
-        .checkState(
-            isPartitioned(),
-            "Attempt to retrieve the partition strategy on a non-partitioned descriptor:%s",
-            this);
-
-    return partitionStrategy;
+    return delegate.getPartitionStrategy();
   }
 
   /**
@@ -251,7 +203,7 @@ public class DatasetDescriptor {
    * @since 0.14.0
    */
   public ColumnMapping getColumnMapping() {
-    return columnMappings;
+    return delegate.getColumnMapping();
   }
 
   /**
@@ -262,7 +214,7 @@ public class DatasetDescriptor {
    * @since 0.17.0
    */
   public CompressionType getCompressionType() {
-    return compressionType;
+    return delegate.getCompressionType();
   }
 
   /**
@@ -270,7 +222,7 @@ public class DatasetDescriptor {
    * associated {@link PartitionStrategy}), false otherwise.
    */
   public boolean isPartitioned() {
-    return partitionStrategy != null;
+    return delegate.isPartitioned();
   }
 
   /**
@@ -280,13 +232,11 @@ public class DatasetDescriptor {
    * @since 0.14.0
    */
   public boolean isColumnMapped() {
-    return columnMappings != null;
+    return delegate.isColumnMapped();
   }
 
-  @Override
-  public int hashCode() {
-    return Objects.hashCode(schema, format, location, properties,
-        partitionStrategy, columnMappings, compressionType);
+  protected Map<String, String> getProperties() {
+    return delegate.getProperties();
   }
 
   @Override
@@ -298,29 +248,7 @@ public class DatasetDescriptor {
       return false;
     }
     final DatasetDescriptor other = (DatasetDescriptor) obj;
-    return (
-        Objects.equal(schema, other.schema) &&
-        Objects.equal(format, other.format) &&
-        Objects.equal(location, other.location) &&
-        Objects.equal(properties, other.properties) &&
-        Objects.equal(partitionStrategy, other.partitionStrategy) &&
-        Objects.equal(columnMappings, other.columnMappings) &&
-        Objects.equal(compressionType, other.compressionType));
-  }
-
-  @Override
-  public String toString() {
-    Objects.ToStringHelper helper = Objects.toStringHelper(this)
-        .add("format", format)
-        .add("schema", schema)
-        .add("location", location)
-        .add("properties", properties)
-        .add("partitionStrategy", partitionStrategy)
-        .add("compressionType", compressionType);
-    if (isColumnMapped()) {
-      helper.add("columnMapping", columnMappings);
-    }
-    return helper.toString();
+    return (delegate.equals(other.delegate));
   }
 
   /**
@@ -328,30 +256,10 @@ public class DatasetDescriptor {
    */
   public static class Builder {
 
-    // used to match resource:schema.avsc URIs
-    private static final String RESOURCE_URI_SCHEME = "resource";
-
-    private Configuration conf;
-    private URI defaultFS;
-
-    private Schema schema;
-    private URI schemaUri;
-    private Format format = Formats.AVRO;
-    private URI location;
-    private Map<String, String> properties;
-    private PartitionStrategy partitionStrategy;
-    private ColumnMapping columnMapping;
-    private ColumnMapping copiedMapping;
-    private CompressionType compressionType;
+    private final Builder delegate;
 
     public Builder() {
-      this.properties = Maps.newHashMap();
-      this.conf = DefaultConfiguration.get();
-      try {
-        this.defaultFS = FileSystem.get(conf).getUri();
-      } catch (IOException e) {
-        throw new DatasetIOException("Cannot get the default FS", e);
-      }
+      delegate = DATASET_DESRIPTOR_BUILDER_FACTORY.newBuilder();
     }
 
     /**
@@ -363,15 +271,7 @@ public class DatasetDescriptor {
      * @since 0.7.0
      */
     public Builder(DatasetDescriptor descriptor) {
-      this();
-      this.schema = descriptor.schema;
-      this.schemaUri = descriptor.schemaUri;
-      this.format = descriptor.format;
-      this.location = descriptor.location;
-      this.copiedMapping = descriptor.columnMappings;
-      this.compressionType = descriptor.compressionType;
-      this.partitionStrategy = descriptor.partitionStrategy;
-      properties.putAll(descriptor.properties);
+      delegate = DATASET_DESRIPTOR_BUILDER_FACTORY.newBuilder(descriptor);
     }
 
     /**
@@ -382,9 +282,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schema(Schema schema) {
-      Preconditions.checkNotNull(schema, "Schema cannot be null");
-      this.schema = schema;
-      return this;
+      return delegate.schema(schema);
     }
 
     /**
@@ -396,9 +294,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schema(File file) throws IOException {
-      this.schema = new Schema.Parser().parse(file);
-      // don't set schema URL since it is a local file not on a DFS
-      return this;
+      return delegate.schema(file);
     }
 
     /**
@@ -411,8 +307,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schema(InputStream in) throws IOException {
-      this.schema = new Schema.Parser().parse(in);
-      return this;
+      return delegate.schema(in);
     }
 
     /**
@@ -428,18 +323,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder schemaUri(URI uri) throws IOException {
-      this.schemaUri = qualifiedUri(uri);
-
-      InputStream in = null;
-      boolean threw = true;
-      try {
-        in = open(uri);
-        schema(in);
-        threw = false;
-      } finally {
-        Closeables.close(in, threw);
-      }
-      return this;
+      return delegate.schemaUri(uri);
     }
 
     /**
@@ -455,7 +339,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder schemaUri(String uri) throws IOException {
-      return schemaUri(URI.create(uri));
+      return delegate.schemaUri(uri);
     }
 
     /**
@@ -469,8 +353,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder schemaLiteral(String s) {
-      this.schema = new Schema.Parser().parse(s);
-      return this;
+      return delegate.schemaLiteral(s);
     }
 
     /**
@@ -483,8 +366,7 @@ public class DatasetDescriptor {
      * @since 0.2.0
      */
     public <T> Builder schema(Class<T> type) {
-      this.schema = ReflectData.get().getSchema(type);
-      return this;
+      return delegate.schema(type);
     }
 
     /**
@@ -496,17 +378,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schemaFromAvroDataFile(File file) throws IOException {
-      GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<GenericRecord>();
-      DataFileReader<GenericRecord> reader = null;
-      boolean threw = true;
-      try {
-        reader = new DataFileReader<GenericRecord>(file, datumReader);
-        this.schema = reader.getSchema();
-        threw = false;
-      } finally {
-        Closeables.close(reader, threw);
-      }
-      return this;
+      return delegate.schemaFromAvroDataFile(file);
     }
 
     /**
@@ -519,17 +391,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schemaFromAvroDataFile(InputStream in) throws IOException {
-      GenericDatumReader<GenericRecord> datumReader = new GenericDatumReader<GenericRecord>();
-      DataFileStream<GenericRecord> stream = null;
-      boolean threw = true;
-      try {
-        stream = new DataFileStream<GenericRecord>(in, datumReader);
-        this.schema = stream.getSchema();
-        threw = false;
-      } finally {
-        Closeables.close(stream, threw);
-      }
-      return this;
+      return delegate.schemaFromAvroDataFile(in);
     }
 
     /**
@@ -541,16 +403,7 @@ public class DatasetDescriptor {
      * @return An instance of the builder for method chaining.
      */
     public Builder schemaFromAvroDataFile(URI uri) throws IOException {
-      InputStream in = null;
-      boolean threw = true;
-      try {
-        in = open(uri);
-        schemaFromAvroDataFile(in);
-        threw = false;
-      } finally {
-        Closeables.close(in, threw);
-      }
-      return this;
+      return delegate.schemaFromAvroDataFile(uri);
     }
 
     /**
@@ -561,8 +414,7 @@ public class DatasetDescriptor {
      * @since 0.2.0
      */
     public Builder format(Format format) {
-      this.format = format;
-      return this;
+      return delegate.format(format);
     }
 
     /**
@@ -576,7 +428,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder format(String formatName) {
-      return this.format(Formats.fromString(formatName));
+      return delegate.format(formatName);
     }
 
     /**
@@ -588,11 +440,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder location(@Nullable URI uri) {
-      // URI can be null if the descriptor is configuring a new Dataset
-      Preconditions.checkArgument((uri == null) || (uri.getScheme() != null),
-          "Location URIs must be fully-qualified and have a FS scheme.");
-      this.location = uri;
-      return this;
+      return delegate.location(uri);
     }
 
     /**
@@ -603,9 +451,13 @@ public class DatasetDescriptor {
      *
      * @since 0.8.0
      */
+    /*
+
+    TODO: Need to add Hadoop as a dependency for Path
     public Builder location(Path uri) {
-      return location(uri.toUri());
+      return delegate.location(uri);
     }
+    */
 
     /**
      * Configure the dataset's location (optional).
@@ -616,7 +468,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder location(String uri) {
-      return location(URI.create(uri));
+      return delegate.location(uri);
     }
 
     /**
@@ -629,8 +481,7 @@ public class DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder property(String name, String value) {
-      this.properties.put(name, value);
-      return this;
+      return delegate.property(name, value);
     }
 
     /**
@@ -640,8 +491,7 @@ public class DatasetDescriptor {
      */
     public Builder partitionStrategy(
         @Nullable PartitionStrategy partitionStrategy) {
-      this.partitionStrategy = partitionStrategy;
-      return this;
+      return delegate.partitionStrategy(partitionStrategy);
     }
 
     /**
@@ -663,8 +513,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder partitionStrategy(File file) {
-      this.partitionStrategy = PartitionStrategyParser.parse(file);
-      return this;
+      return delegate.partitionStrategy(file);
     }
 
     /**
@@ -685,8 +534,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder partitionStrategy(InputStream in) {
-      this.partitionStrategy = PartitionStrategyParser.parse(in);
-      return this;
+      return delegate.partitionStrategy(in);
     }
 
     /**
@@ -704,8 +552,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder partitionStrategyLiteral(String literal) {
-      this.partitionStrategy = PartitionStrategyParser.parse(literal);
-      return this;
+      return delegate.partitionStrategyLiteral(literal);
     }
 
     /**
@@ -720,16 +567,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder partitionStrategyUri(URI uri) throws IOException {
-      InputStream in = null;
-      boolean threw = true;
-      try {
-        in = open(uri);
-        partitionStrategy(in);
-        threw = false;
-      } finally {
-        Closeables.close(in, threw);
-      }
-      return this;
+      return delegate.partitionStrategyUri(uri);
     }
 
     /**
@@ -744,7 +582,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder partitionStrategyUri(String uri) throws IOException {
-      return partitionStrategyUri(URI.create(uri));
+      return delegate.partitionStrategyUri(uri);
     }
 
     /**
@@ -758,8 +596,7 @@ public class DatasetDescriptor {
      */
     public Builder columnMapping(
         @Nullable ColumnMapping columnMappings) {
-      this.columnMapping = columnMappings;
-      return this;
+      return delegate.columnMapping(columnMappings);
     }
 
     /**
@@ -779,8 +616,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder columnMapping(File file) {
-      this.columnMapping = ColumnMappingParser.parse(file);
-      return this;
+      return delegate.columnMapping(file);
     }
 
     /**
@@ -800,8 +636,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder columnMapping(InputStream in) {
-      this.columnMapping = ColumnMappingParser.parse(in);
-      return this;
+      return delegate.columnMapping(in);
     }
 
     /**
@@ -819,8 +654,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder columnMappingLiteral(String literal) {
-      this.columnMapping = ColumnMappingParser.parse(literal);
-      return this;
+      return delegate.columnMappingLiteral(literal);
     }
 
     /**
@@ -837,16 +671,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder columnMappingUri(URI uri) throws IOException {
-      InputStream in = null;
-      boolean threw = true;
-      try {
-        in = open(uri);
-        columnMapping(in);
-        threw = false;
-      } finally {
-        Closeables.close(in, threw);
-      }
-      return this;
+      return delegate.columnMappingUri(uri);
     }
 
     /**
@@ -863,7 +688,7 @@ public class DatasetDescriptor {
      * @since 0.14.0
      */
     public Builder columnMappingUri(String uri) throws IOException {
-      return columnMappingUri(URI.create(uri));
+      return delegate.columnMappingUri(uri);
     }
 
     /**
@@ -877,8 +702,7 @@ public class DatasetDescriptor {
      * @since 0.17.0
      */
     public Builder compressionType(CompressionType compressionType) {
-      this.compressionType = compressionType;
-      return this;
+      return delegate.compressionType(compressionType);
     }
 
     /**
@@ -892,7 +716,7 @@ public class DatasetDescriptor {
      * @since 0.17.0
      */
     public Builder compressionType(String compressionTypeName) {
-      return compressionType(CompressionType.forName(compressionTypeName));
+      return delegate.compressionType(compressionTypeName);
     }
 
     /**
@@ -902,186 +726,83 @@ public class DatasetDescriptor {
      * @since 0.9.0
      */
     public DatasetDescriptor build() {
-      Preconditions.checkState(schema != null,
-          "Descriptor schema is required and cannot be null");
-
-      // if no partition strategy is defined, check for one in the schema
-      if (partitionStrategy == null) {
-        if (PartitionStrategyParser.hasEmbeddedStrategy(schema)) {
-          this.partitionStrategy = PartitionStrategyParser.parseFromSchema(schema);
-        }
-      }
-
-      // if no column mappings are present, check for them in the schema
-      if (columnMapping == null) {
-        if (ColumnMappingParser.hasEmbeddedColumnMapping(schema)) {
-          this.columnMapping = ColumnMappingParser.parseFromSchema(schema);
-        } else if (ColumnMappingParser.hasEmbeddedFieldMappings(schema)) {
-          this.columnMapping = ColumnMappingParser.parseFromSchemaFields(schema);
-          if (partitionStrategy == null) {
-            // For backward-compatibility, build a strategy from key values
-            // TODO: warn that this should be fixed before 1.0
-            this.partitionStrategy = buildPartitionStrategyForKeyMappings(
-                ColumnMappingParser.parseKeyMappingsFromSchemaFields(schema));
-          }
-        }
-      }
-
-      // if we still don't have a column mapping, see if we had one copied from
-      // another descriptor
-      if (columnMapping == null && copiedMapping != null) {
-        columnMapping = copiedMapping;
-      }
-
-      checkPartitionStrategy(schema, partitionStrategy);
-      checkColumnMappings(schema, partitionStrategy, columnMapping);
-      // TODO: verify that all fields have a mapping?
-
-      return new DatasetDescriptor(
-          schema, schemaUri, format, location, properties, partitionStrategy,
-          columnMapping, compressionType);
+      return delegate.build();
     }
 
-    private InputStream open(URI location) throws IOException {
-      if (RESOURCE_URI_SCHEME.equals(location.getScheme())) {
-        return Resources.getResource(location.getRawSchemeSpecificPart()).openStream();
-      } else {
-        Path filePath = new Path(qualifiedUri(location));
-        // even though it was qualified using the default FS, it may not be in it
-        FileSystem fs = filePath.getFileSystem(conf);
-        return fs.open(filePath);
-      }
+    protected static Map<String, String> getProperties(DatasetDescriptor descriptor) {
+      return descriptor.getProperties();
     }
 
-    private URI qualifiedUri(URI location) throws IOException {
-      if (RESOURCE_URI_SCHEME.equals(location.getScheme())) {
-        return null;
-      } else {
-        boolean useDefault = defaultFS.getScheme().equals(location.getScheme());
-        // work around a bug in Path where the authority for a different scheme
-        // will be used for the location.
-        return new Path(location)
-            .makeQualified(useDefault ? defaultFS : location, new Path("/"))
-            .toUri();
-      }
-    }
-
-    private static void checkPartitionStrategy(
-        Schema schema, @Nullable PartitionStrategy strategy) {
-      if (strategy == null) {
-        return;
-      }
-      // TODO: the exceptions thrown by this should all be ValidationException
-      for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
-        if (fp instanceof ProvidedFieldPartitioner) {
-          // provided partitioners are not based on the entity fields
-          continue;
-        }
-
-        // check the entity is a record if there is a non-provided partitioner
-        Preconditions.checkState(schema.getType() == Schema.Type.RECORD,
-            "Cannot partition non-records: " + schema);
-
-        // the source name should be a field in the schema, but not necessarily
-        // the record.
-        Schema fieldSchema;
-        try {
-          fieldSchema = SchemaUtil.fieldSchema(schema, fp.getSourceName());
-        } catch (IllegalArgumentException e) {
-          throw new IllegalStateException(
-              "Cannot partition on " + fp.getSourceName(), e);
-        }
-        Preconditions.checkState(
-            SchemaUtil.isConsistentWithExpectedType(
-                fieldSchema.getType(), fp.getSourceType()),
-            "Field type %s does not match partitioner %s",
-            fieldSchema.getType(), fp);
-      }
-    }
   }
 
-  private static void checkCompressionType(Format format,
-      @Nullable CompressionType compressionType) {
+  private static final DatasetDescriptorFactory DATASET_DESCRIPTOR_FACTORY;
 
-    if (compressionType == null) {
-      return;
-    }
+  protected static interface DatasetDescriptorFactory {
 
-    Preconditions.checkState(format.getSupportedCompressionTypes()
-        .contains(compressionType),
-        "Format %s doesn't support compression format %s", format.getName(),
-        compressionType.getName());
+    public DatasetDescriptor newDatasetDescriptor(Schema schema,
+        @Nullable URL schemaUrl, Format format, @Nullable URI location,
+        @Nullable Map<String, String> properties,
+        @Nullable PartitionStrategy partitionStrategy);
+
+    public DatasetDescriptor newDatasetDescriptor(Schema schema,
+        @Nullable URL schemaUrl, Format format, @Nullable URI location,
+        @Nullable Map<String, String> properties,
+        @Nullable PartitionStrategy partitionStrategy,
+        @Nullable ColumnMapping columnMapping);
+
+    public DatasetDescriptor newDatasetDescriptor(Schema schema,
+        @Nullable URI schemaUri, Format format, @Nullable URI location,
+        @Nullable Map<String, String> properties,
+        @Nullable PartitionStrategy partitionStrategy,
+        @Nullable ColumnMapping columnMapping,
+        @Nullable CompressionType compressionType);
+
   }
 
-  private static void checkColumnMappings(Schema schema,
-                                          @Nullable PartitionStrategy strategy,
-                                          @Nullable ColumnMapping mappings) {
-    if (mappings == null) {
-      return;
-    }
-    Preconditions.checkState(schema.getType() == Schema.Type.RECORD,
-        "Cannot map non-records: " + schema);
-    Set<String> keyMappedFields = Sets.newHashSet();
-    for (FieldMapping fm : mappings.getFieldMappings()) {
-      Schema.Field field = schema.getField(fm.getFieldName());
-      ValidationException.check(field != null,
-          "Cannot map field %s (missing from schema)", fm.getFieldName());
-      ValidationException.check(
-          SchemaUtil.isConsistentWithMappingType(
-              field.schema().getType(), fm.getMappingType()),
-          "Field type %s is not compatible with mapping %s",
-          field.schema().getType(), fm);
-      if (FieldMapping.MappingType.KEY == fm.getMappingType()) {
-        keyMappedFields.add(fm.getFieldName());
-      }
-    }
-    // verify that all key mapped fields have a corresponding id partitioner
-    if (strategy != null) {
-      for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
-        if (fp instanceof IdentityFieldPartitioner) {
-          keyMappedFields.remove(fp.getSourceName());
-        }
-      }
-    }
-    // any remaining keyMappedFields are invalid
-    if (keyMappedFields.size() > 0) {
-      throw new ValidationException(
-          "Fields are key-mapped without identity partitioners: " +
-          Joiner.on(", ").join(keyMappedFields));
-    }
+  private static final DatasetDescriptorBuilderFactory DATASET_DESRIPTOR_BUILDER_FACTORY;
+
+  protected static interface DatasetDescriptorBuilderFactory {
+
+    public Builder newBuilder();
+
+    public Builder newBuilder(DatasetDescriptor descriptor);
+
   }
 
-  private static PartitionStrategy buildPartitionStrategyForKeyMappings(
-      Map<Integer, FieldMapping> keyMappings) {
-    PartitionStrategy.Builder builder = new PartitionStrategy.Builder();
-    for (Integer index : new TreeSet<Integer>(keyMappings.keySet())) {
-      builder.identity(keyMappings.get(index).getFieldName());
+  static {
+    ServiceLoader<DatasetDescriptorFactory> factories =
+        ServiceLoader.load(DatasetDescriptorFactory.class);
+
+    DatasetDescriptorFactory selectedFactory = null;
+    for (DatasetDescriptorFactory factory : factories) {
+      LOG.debug("Using {} to build DatasetDescriptor objects", factory.getClass());
+      selectedFactory = factory;
+      break;
     }
-    return builder.build();
+
+    if (selectedFactory == null) {
+      throw new RuntimeException("No implementation of " + DatasetDescriptor.class +
+          " available. Make sure that kite-data-common is on the classpath");
+    }
+
+    DATASET_DESCRIPTOR_FACTORY = selectedFactory;
+
+    ServiceLoader<DatasetDescriptorBuilderFactory> builderFactories =
+        ServiceLoader.load(DatasetDescriptorBuilderFactory.class);
+
+    DatasetDescriptorBuilderFactory selectedBuilderFactory = null;
+    for (DatasetDescriptorBuilderFactory factory : builderFactories) {
+      LOG.debug("Using {} to build DatasetDescriptor.Builder objects", factory.getClass());
+      selectedBuilderFactory = factory;
+      break;
+    }
+
+    if (selectedFactory == null) {
+      throw new RuntimeException("No implementation of " + DatasetDescriptor.class +
+          " available. Make sure that kite-data-common is on the classpath");
+    }
+
+    DATASET_DESRIPTOR_BUILDER_FACTORY = selectedBuilderFactory;
   }
 
-  private static URI toURI(@Nullable URL url) {
-    if (url == null) {
-      return null;
-    }
-    // throw IllegalArgumentException if the URL is not a URI
-    return URI.create(url.toExternalForm());
-  }
-
-  private static URL toURL(@Nullable URI uri) {
-    if (uri == null) {
-      return null;
-    }
-    try {
-      // try with installed URLStreamHandlers first...
-      return uri.toURL();
-    } catch (MalformedURLException e) {
-      try {
-        // if that fails then try using the Hadoop protocol handler
-        return new URL(null, uri.toString(), new HadoopFileSystemURLStreamHandler());
-      } catch (MalformedURLException _) {
-        return null; // can't produce a URL
-      }
-    }
-  }
 }

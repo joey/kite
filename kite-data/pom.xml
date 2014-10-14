@@ -23,6 +23,7 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>kite-data-api</module>
     <module>kite-data-core</module>
     <module>kite-data-hive</module>
     <module>kite-data-crunch</module>

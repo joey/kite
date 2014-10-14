@@ -15,8 +15,8 @@
  */
 package org.kitesdk.data;
 
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
@@ -42,7 +42,8 @@ public class Format {
       CompressionType[] supportedCompressionTypes) {
     this.name = name;
     this.defaultCompressionType = defaultCompressionType;
-    this.supportedCompressionTypes = ImmutableSet.copyOf(supportedCompressionTypes);
+    this.supportedCompressionTypes = new HashSet<CompressionType>(supportedCompressionTypes.length);
+    this.supportedCompressionTypes.addAll(Arrays.asList(supportedCompressionTypes));
   }
 
   /**
@@ -95,16 +96,19 @@ public class Format {
 
     Format that = (Format) o;
 
-    return Objects.equal(this.name, that.name);
+    return this.name.equals(that.name);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(name);
+    int hash = 7;
+    hash = 67 * hash + (this.name != null ? this.name.hashCode() : 0);
+    return hash;
   }
 
   @Override
   public String toString() {
-    return Objects.toStringHelper(this).add("name", name).toString();
+    return "Format{" + "name=" + name + '}';
   }
+
 }
