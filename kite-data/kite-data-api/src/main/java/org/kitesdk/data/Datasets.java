@@ -16,19 +16,13 @@
 
 package org.kitesdk.data;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import java.net.URI;
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import org.apache.avro.Schema;
+import java.util.ServiceLoader;
 import org.apache.avro.generic.GenericRecord;
-import org.kitesdk.data.spi.DatasetRepository;
-import org.kitesdk.data.spi.AbstractDataset;
-import org.kitesdk.data.spi.Constraints;
-import org.kitesdk.data.spi.Pair;
-import org.kitesdk.data.spi.Registration;
+import org.kitesdk.data.spi.DatasetsInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>Convenience methods for working with {@link Dataset} instances.</p>
@@ -36,6 +30,9 @@ import org.kitesdk.data.spi.Registration;
  * @since 0.8.0
  */
 public class Datasets {
+
+  private static final Logger LOG = LoggerFactory.getLogger(Datasets.class);
+  private static final DatasetsInterface delegate;
 
   /**
    * Load a {@link Dataset} or {@link View} for the given {@link URI}.
@@ -51,31 +48,8 @@ public class Datasets {
    * @param <V> The type of {@code View} expected.
    * @return a {@code View} for the given URI.
    */
-  @SuppressWarnings("unchecked")
   public static <E, V extends View<E>> V load(URI uri, Class<E> type) {
-    boolean isView = URIBuilder.VIEW_SCHEME.equals(uri.getScheme());
-    Preconditions.checkArgument(isView ||
-        URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
-        "Not a dataset or view URI: " + uri);
-    Preconditions.checkNotNull(type,
-        "The entity type can't be null, use Object.class to have the type"
-        + " determined by the schema.");
-
-    Pair<DatasetRepository, Map<String, String>> pair =
-        Registration.lookupDatasetUri(URI.create(uri.getRawSchemeSpecificPart()));
-    DatasetRepository repo = pair.first();
-    Map<String, String> uriOptions = pair.second();
-
-    Dataset<E> dataset = repo.load(
-        uriOptions.get(URIBuilder.NAMESPACE_OPTION),
-        uriOptions.get(URIBuilder.DATASET_NAME_OPTION), type);
-
-    if (isView) {
-      return Datasets.<E, V> view(dataset, uriOptions);
-    } else {
-      // if the URI isn't a view URI, only load the dataset
-      return (V) dataset;
-    }
+    return delegate.load(uri, type);
   }
 
   /**
@@ -90,9 +64,8 @@ public class Datasets {
    * @param <V> The type of {@code View} expected.
    * @return a {@code View} for the given URI.
    */
-  @SuppressWarnings("unchecked")
   public static <V extends View<GenericRecord>> V load(URI uri) {
-    return Datasets.<GenericRecord, V>load(uri, GenericRecord.class);
+    return delegate.load(uri);
   }
 
   /**
@@ -110,7 +83,7 @@ public class Datasets {
    * @return a {@code View} for the given URI.
    */
   public static <E, V extends View<E>> V load(String uriString, Class<E> type) {
-    return Datasets.<E, V> load(URI.create(uriString), type);
+    return delegate.load(uriString, type);
   }
 
   /**
@@ -126,8 +99,7 @@ public class Datasets {
    * @return a {@code View} for the given URI.
    */
   public static <V extends View<GenericRecord>> V load(String uriString) {
-    return Datasets.<GenericRecord, V>load(
-        uriString, GenericRecord.class);
+    return delegate.load(uriString);
   }
 
   /**
@@ -142,36 +114,8 @@ public class Datasets {
    * @param <V> The type of {@code Dataset} or {@code View} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
-  @SuppressWarnings("unchecked")
   public static <E, V extends View<E>> V create(URI uri, DatasetDescriptor descriptor, Class<E> type) {
-    boolean isView = URIBuilder.VIEW_SCHEME.equals(uri.getScheme());
-    Preconditions.checkArgument(isView ||
-        URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
-        "Not a dataset or view URI: " + uri);
-    Preconditions.checkNotNull(type,
-        "The entity type can't be null, use Object.class to have the type"
-        + " determined by the schema.");
-
-    Pair<DatasetRepository, Map<String, String>> pair =
-        Registration.lookupDatasetUri(URI.create(uri.getRawSchemeSpecificPart()));
-    DatasetRepository repo = pair.first();
-    Map<String, String> uriOptions = pair.second();
-
-    if (descriptor.getLocation() == null && uriOptions.containsKey("location")) {
-      descriptor = new DatasetDescriptor.Builder(descriptor)
-          .location(uriOptions.get("location"))
-          .build();
-    }
-
-    Dataset<E> dataset = repo.create(
-        uriOptions.get(URIBuilder.NAMESPACE_OPTION),
-        uriOptions.get(URIBuilder.DATASET_NAME_OPTION), descriptor, type);
-
-    if (isView) {
-      return Datasets.<E, V> view(dataset, uriOptions);
-    } else {
-      return (V) dataset;
-    }
+    return delegate.create(uri, descriptor, type);
   }
 
   /**
@@ -184,10 +128,8 @@ public class Datasets {
    * @param <V> The type of {@code Dataset} or {@code View} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
-  @SuppressWarnings("unchecked")
   public static <V extends View<GenericRecord>> V create(URI uri, DatasetDescriptor descriptor) {
-    return Datasets.<GenericRecord, V>create(
-        uri, descriptor, GenericRecord.class);
+    return delegate.create(uri, descriptor);
   }
 
   /**
@@ -203,7 +145,7 @@ public class Datasets {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   public static <E, V extends View<E>> V create(String uri, DatasetDescriptor descriptor, Class<E> type) {
-    return Datasets.<E, V> create(URI.create(uri), descriptor, type);
+    return delegate.create(uri, descriptor, type);
   }
 
   /**
@@ -216,10 +158,8 @@ public class Datasets {
    * @param <V> The type of {@code Dataset} or {@code View} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
-  @SuppressWarnings("unchecked")
   public static <V extends View<GenericRecord>> V create(String uri, DatasetDescriptor descriptor) {
-    return Datasets.<GenericRecord, V>create(
-        uri, descriptor, GenericRecord.class);
+    return delegate.create(uri, descriptor);
   }
 
   /**
@@ -237,21 +177,7 @@ public class Datasets {
   @SuppressWarnings("unchecked")
   public static <E, D extends Dataset<E>> D update(
       URI uri, DatasetDescriptor descriptor, Class<E> type) {
-    Preconditions.checkArgument(
-        URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
-        "Not a dataset or view URI: " + uri);
-    Preconditions.checkNotNull(type,
-        "The entity type can't be null, use Object.class to have the type"
-            + " determined by the schema.");
-
-    Pair<DatasetRepository, Map<String, String>> pair =
-        Registration.lookupDatasetUri(URI.create(uri.getRawSchemeSpecificPart()));
-    DatasetRepository repo = pair.first();
-    Map<String, String> uriOptions = pair.second();
-
-    return (D) repo.update(
-        uriOptions.get(URIBuilder.NAMESPACE_OPTION),
-        uriOptions.get(URIBuilder.DATASET_NAME_OPTION), descriptor, type);
+    return (D) delegate.update(uri, descriptor, type);
   }
 
   /**
@@ -267,8 +193,7 @@ public class Datasets {
   @SuppressWarnings("unchecked")
   public static <D extends Dataset<GenericRecord>> D update(
       URI uri, DatasetDescriptor descriptor) {
-    return Datasets.<GenericRecord, D>update(
-        uri, descriptor, GenericRecord.class);
+    return (D) delegate.update(uri, descriptor);
   }
 
   /**
@@ -284,7 +209,7 @@ public class Datasets {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   public static <E, D extends Dataset<E>> D update(String uri, DatasetDescriptor descriptor, Class<E> type) {
-    return Datasets.<E, D> update(URI.create(uri), descriptor, type);
+    return delegate.update(uri, descriptor, type);
   }
 
   /**
@@ -298,8 +223,7 @@ public class Datasets {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   public static <D extends Dataset<GenericRecord>> D update(String uri, DatasetDescriptor descriptor) {
-    return Datasets.<GenericRecord, D>update(
-        uri, descriptor, GenericRecord.class);
+    return delegate.update(uri, descriptor);
   }
 
   /**
@@ -312,18 +236,7 @@ public class Datasets {
    * @return {@code true} if any data or metadata was removed, or {@code false}
    */
   public static boolean delete(URI uri) {
-    Preconditions.checkArgument(
-        URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
-        "Not a dataset URI: " + uri);
-
-    Pair<DatasetRepository, Map<String, String>> pair =
-        Registration.lookupDatasetUri(URI.create(uri.getRawSchemeSpecificPart()));
-    DatasetRepository repo = pair.first();
-    Map<String, String> uriOptions = pair.second();
-
-    return repo.delete(
-        uriOptions.get(URIBuilder.NAMESPACE_OPTION),
-        uriOptions.get(URIBuilder.DATASET_NAME_OPTION));
+    return delegate.delete(uri);
   }
 
   /**
@@ -336,7 +249,7 @@ public class Datasets {
    * @return {@code true} if any data or metadata was removed, or {@code false}
    */
   public static boolean delete(String uri) {
-    return delete(URI.create(uri));
+    return delegate.delete(uri);
   }
 
   /**
@@ -349,18 +262,7 @@ public class Datasets {
    * @return {@code true} if the dataset exists, {@code false} otherwise
    */
   public static boolean exists(URI uri) {
-    Preconditions.checkArgument(
-        URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
-        "Not a dataset URI: " + uri);
-
-    Pair<DatasetRepository, Map<String, String>> pair =
-        Registration.lookupDatasetUri(URI.create(uri.getRawSchemeSpecificPart()));
-    DatasetRepository repo = pair.first();
-    Map<String, String> uriOptions = pair.second();
-
-    return repo.exists(
-        uriOptions.get(URIBuilder.NAMESPACE_OPTION),
-        uriOptions.get(URIBuilder.DATASET_NAME_OPTION));
+    return delegate.exists(uri);
   }
 
   /**
@@ -373,7 +275,7 @@ public class Datasets {
    * @return {@code true} if the dataset exists, {@code false} otherwise
    */
   public static boolean exists(String uri) {
-    return exists(URI.create(uri));
+    return delegate.exists(uri);
   }
 
   /**
@@ -386,21 +288,7 @@ public class Datasets {
    * @return the URIs present in the {@code DatasetRepository}
    */
   public static Collection<URI> list(URI uri) {
-    boolean isRepo = URIBuilder.REPO_SCHEME.equals(uri.getScheme());
-    Preconditions.checkArgument(isRepo, "Not a repository URI: " + uri);
-    DatasetRepository repo = Registration
-        .open(URI.create(uri.getRawSchemeSpecificPart()));
-
-    // build a URI for each dataset name
-    URI repoUri = repo.getUri();
-    List<URI> datasets = Lists.newArrayList();
-    for (String namespace : repo.namespaces()) {
-      for (String dataset : repo.datasets(namespace)) {
-        datasets.add(new URIBuilder(repoUri, namespace, dataset).build());
-      }
-    }
-
-    return datasets;
+    return delegate.list(uri);
   }
 
   /**
@@ -413,24 +301,25 @@ public class Datasets {
    * @return the URIs present in the {@code DatasetRepository}
    */
   public static Collection<URI> list(String uri) {
-    return list(URI.create(uri));
+    return delegate.list(uri);
   }
 
-  @SuppressWarnings("unchecked")
-  private static <E, V extends View<E>> V view(Dataset<E> dataset,
-                                               Map<String, String> uriOptions) {
-    if (dataset instanceof AbstractDataset) {
-      DatasetDescriptor descriptor = dataset.getDescriptor();
-      Schema schema = descriptor.getSchema();
-      PartitionStrategy strategy = null;
-      if (descriptor.isPartitioned()) {
-        strategy = descriptor.getPartitionStrategy();
-      }
-      Constraints constraints = Constraints.fromQueryMap(
-          schema, strategy, uriOptions);
-      return (V) ((AbstractDataset) dataset).filter(constraints);
-    } else {
-      return (V) dataset;
+  static {
+    ServiceLoader<DatasetsInterface> loader =
+        ServiceLoader.load(DatasetsInterface.class);
+
+    DatasetsInterface selectedImpl = null;
+    for (DatasetsInterface impl : loader) {
+      LOG.debug("Using {} for the Datasets implementation", impl.getClass());
+      selectedImpl = impl;
+      break;
     }
+
+    if (selectedImpl == null) {
+      throw new RuntimeException();
+    }
+
+    delegate = selectedImpl;
   }
+
 }

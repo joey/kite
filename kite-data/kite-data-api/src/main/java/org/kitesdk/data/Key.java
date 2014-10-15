@@ -16,6 +16,7 @@
 package org.kitesdk.data;
 
 import java.util.ServiceLoader;
+import org.kitesdk.data.spi.KeyBuilderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,11 +84,6 @@ public abstract class Key {
 
     private static final KeyBuilderFactory KEY_BUILDER_FACTORY;
 
-    protected static interface KeyBuilderFactory {
-
-      public Builder newKeyBuilder(RandomAccessDataset dataset);
-
-    }
 
     static {
       ServiceLoader<KeyBuilderFactory> factories
@@ -101,12 +97,15 @@ public abstract class Key {
       }
 
       if (selectedFactory == null) {
-        throw new RuntimeException("No implementation of " + Key.class
-            + " available. Make sure that kite-data-common is on the classpath");
+        String msg = "No implementation of " + Key.class + " available. Make"
+           + " sure that kite-data-common is on the classpath";
+        LOG.error(msg);
+        throw new RuntimeException(msg);
       }
 
       KEY_BUILDER_FACTORY = selectedFactory;
     }
 
   }
+
 }

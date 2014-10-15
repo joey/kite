@@ -48,6 +48,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Predicates.alwaysTrue;
+import org.kitesdk.data.impl.Accessor;
 
 /**
  * A set of simultaneous constraints.
@@ -137,10 +138,10 @@ public class Constraints {
   @SuppressWarnings("unchecked")
   Map<String, Predicate> minimizeFor(StorageKey key) {
     Map<String, Predicate> unsatisfied = Maps.newHashMap(constraints);
-    PartitionStrategy strategy = key.getPartitionStrategy();
+    PartitionStrategy keyStrategy = key.getPartitionStrategy();
     Set<String> timeFields = Sets.newHashSet();
     int i = 0;
-    for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+    for (FieldPartitioner fp : Accessor.getFieldPartitioners(keyStrategy)) {
       String partition = fp.getName();
       Predicate partitionPredicate = unsatisfied.get(partition);
       if (partitionPredicate != null && partitionPredicate.apply(key.get(i))) {
@@ -169,7 +170,7 @@ public class Constraints {
     for (String timeField : timeFields) {
       Predicate<Long> original = unsatisfied.get(timeField);
       if (original != null) {
-        Predicate<Marker> isSatisfiedBy = TimeDomain.get(strategy, timeField)
+        Predicate<Marker> isSatisfiedBy = TimeDomain.get(keyStrategy, timeField)
             .projectStrict(original);
         LOG.debug("original: " + original + ", strict: " + isSatisfiedBy);
         if ((isSatisfiedBy != null) && isSatisfiedBy.apply(key)) {
@@ -241,7 +242,7 @@ public class Constraints {
         "Cannot produce key ranges without a partition strategy");
     Multimap<String, FieldPartitioner> partitioners = HashMultimap.create();
     Set<String> partitionFields = Sets.newHashSet();
-    for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+    for (FieldPartitioner fp : Accessor.getFieldPartitioners(strategy)) {
       partitioners.put(fp.getSourceName(), fp);
       partitionFields.add(fp.getName());
     }
@@ -552,7 +553,7 @@ public class Constraints {
 
       if (strategy != null) {
         // there could be partition predicates to add
-        for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+        for (FieldPartitioner fp : Accessor.getFieldPartitioners(strategy)) {
           if (fp instanceof ProvidedFieldPartitioner) {
             // no source field for provided partitioners, so no values to test
             continue;
@@ -642,7 +643,8 @@ public class Constraints {
       // itself. usually the function is identity when this happens and there is
       // no problem because of the combine identity check.
 
-      List<FieldPartitioner> partitioners = strategy.getFieldPartitioners();
+      List<FieldPartitioner> partitioners = Accessor.getFieldPartitioners(
+          strategy);
       Predicate[] preds = new Predicate[partitioners.size()];
 
       Map<String, Predicate> timeFields = Maps.newHashMap();

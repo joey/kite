@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data;
 
+import org.kitesdk.data.spi.ColumnMappingFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.ServiceLoader;
@@ -251,11 +252,6 @@ public abstract class ColumnMapping {
 
   private final static ColumnMappingFactory COLUMN_MAPPING_FACTORY;
 
-  protected static interface ColumnMappingFactory {
-
-    public ColumnMapping newColumnMapping(Collection<FieldMapping> fieldMappings);
-
-  }
 
   static {
     ServiceLoader<ColumnMappingFactory> factories =

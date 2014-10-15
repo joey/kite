@@ -43,8 +43,8 @@ public class TestDateFormatPartitioner {
     PartitionStrategy strategy = new PartitionStrategy.Builder()
         .dateFormat("timestamp", "day", "yyyy-MM-dd")
         .build();
-    PartitionStrategy copy = Accessor.getDefault().fromExpression(
-        Accessor.getDefault().toExpression(strategy));
+    PartitionStrategy copy = Accessor.fromExpression(
+        Accessor.toExpression(strategy));
     Assert.assertEquals(strategy, copy);
   }
 }

@@ -88,7 +88,7 @@ public class MemoryMetadataProvider extends AbstractMetadataProvider {
     DatasetDescriptor newDescriptor;
     if (descriptor.getLocation() == null) {
       newDescriptor = new DatasetDescriptor.Builder(descriptor)
-          .location(fs.makeQualified(new Path(newLocation(name))))
+          .location(fs.makeQualified(new Path(newLocation(name))).toUri()) // JGE: revert if we keep location(Path)
           .build();
     } else {
       // don't need to modify it

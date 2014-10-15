@@ -37,6 +37,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map;
+import org.kitesdk.data.impl.Accessor;
 
 public class PathConversion {
 
@@ -48,7 +49,7 @@ public class PathConversion {
 
   public StorageKey toKey(Path fromPath, StorageKey storage) {
     final List<FieldPartitioner> partitioners =
-        storage.getPartitionStrategy().getFieldPartitioners();
+        Accessor.getFieldPartitioners(storage.getPartitionStrategy());
     final List<Object> values = Lists.newArrayList(
         new Object[partitioners.size()]);
 
@@ -72,7 +73,7 @@ public class PathConversion {
   public Path fromKey(StorageKey key) {
     final StringBuilder pathBuilder = new StringBuilder();
     final List<FieldPartitioner> partitioners =
-        key.getPartitionStrategy().getFieldPartitioners();
+        Accessor.getFieldPartitioners(key.getPartitionStrategy());
 
     for (int i = 0; i < partitioners.size(); i++) {
       final FieldPartitioner fp = partitioners.get(i);

@@ -33,6 +33,7 @@ import org.apache.avro.Schema;
 import org.kitesdk.data.DatasetIOException;
 import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.ValidationException;
+import org.kitesdk.data.impl.PartitionStrategyImpl;
 import org.kitesdk.data.spi.partition.DateFormatPartitioner;
 import org.kitesdk.data.spi.partition.DayOfMonthFieldPartitioner;
 import org.kitesdk.data.spi.partition.HashFieldPartitioner;
@@ -127,7 +128,7 @@ public class PartitionStrategyParser {
     // Avro considers Props read-only and uses an older Jackson version
     // Parse the Schema as a String because Avro uses com.codehaus.jackson
     ObjectNode schemaJson = JsonUtil.parse(schema.toString(), ObjectNode.class);
-    schemaJson.set(PARTITIONS, toJson(strategy));
+    schemaJson.set(PARTITIONS, toJson((PartitionStrategyImpl) strategy));
     return new Schema.Parser().parse(schemaJson.toString());
   }
 
@@ -207,7 +208,7 @@ public class PartitionStrategyParser {
     return builder.build();
   }
 
-  private static JsonNode toJson(PartitionStrategy strategy) {
+  private static JsonNode toJson(PartitionStrategyImpl strategy) {
     ArrayNode strategyJson = JsonNodeFactory.instance.arrayNode();
     for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
       ObjectNode partitioner = JsonNodeFactory.instance.objectNode();
@@ -261,7 +262,7 @@ public class PartitionStrategyParser {
         gen.useDefaultPrettyPrinter();
       }
       gen.setCodec(new ObjectMapper());
-      gen.writeTree(toJson(strategy));
+      gen.writeTree(toJson((PartitionStrategyImpl) strategy));
       gen.close();
     } catch (IOException e) {
       throw new DatasetIOException("Cannot write to JSON generator", e);

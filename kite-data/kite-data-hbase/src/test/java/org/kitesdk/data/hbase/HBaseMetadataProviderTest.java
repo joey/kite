@@ -31,6 +31,7 @@ import org.kitesdk.data.hbase.manager.DefaultSchemaManager;
 import org.kitesdk.data.hbase.testing.HBaseTestUtils;
 
 import static org.junit.Assert.assertEquals;
+import org.kitesdk.data.impl.Accessor;
 
 public class HBaseMetadataProviderTest {
 
@@ -79,7 +80,7 @@ public class HBaseMetadataProviderTest {
     ColumnMapping columnMapping = desc.getColumnMapping();
     PartitionStrategy partStrat = desc.getPartitionStrategy();
     assertEquals(9, columnMapping.getFieldMappings().size());
-    assertEquals(2, partStrat.getFieldPartitioners().size());
+    assertEquals(2, Accessor.getFieldPartitioners(partStrat).size());
   }
 
 }

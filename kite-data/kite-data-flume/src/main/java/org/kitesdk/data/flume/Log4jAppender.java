@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.flume.FlumeException;
 import org.kitesdk.data.Datasets;
+import org.kitesdk.data.impl.Accessor;
 import org.kitesdk.data.spi.StorageKey;
 import org.kitesdk.data.spi.filesystem.PathConversion;
 
@@ -122,7 +123,7 @@ public class Log4jAppender extends org.apache.flume.clients.log4jappender.Log4jA
     if (partitionStrategy != null) {
       key.reuseFor(message, accessor);
       int i = 0;
-      for (FieldPartitioner fp : partitionStrategy.getFieldPartitioners()) {
+      for (FieldPartitioner fp : Accessor.getFieldPartitioners(partitionStrategy)) {
         hdrs.put(PARTITION_PREFIX + fp.getName(),
             PathConversion.valueToString(fp, key.get(i++)));
       }

@@ -46,6 +46,7 @@ import org.kitesdk.data.DatasetIOException;
 import org.kitesdk.data.FieldMapping;
 import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.ValidationException;
+import org.kitesdk.data.impl.Accessor;
 import org.kitesdk.data.spi.partition.IdentityFieldPartitioner;
 import org.kitesdk.data.spi.partition.ProvidedFieldPartitioner;
 
@@ -188,7 +189,7 @@ public class SchemaUtil {
                                 String name) {
     Schema.Field field = schema.getField(name);
     return ((field != null) ||
-        (strategy != null && strategy.hasPartitioner(name)));
+        (strategy != null && Accessor.hasPartitioner(strategy, name)));
   }
 
   /**
@@ -202,8 +203,8 @@ public class SchemaUtil {
    */
   public static Schema fieldSchema(Schema schema, PartitionStrategy strategy,
                                    String name) {
-    if (strategy != null && strategy.hasPartitioner(name)) {
-      return partitionFieldSchema(strategy.getPartitioner(name), schema);
+    if (strategy != null && Accessor.hasPartitioner(strategy, name)) {
+      return partitionFieldSchema(Accessor.getPartitioner(strategy, name), schema);
     }
     Schema nested = fieldSchema(schema, name);
     if (nested != null) {
@@ -250,7 +251,7 @@ public class SchemaUtil {
    */
   public static Schema keySchema(Schema schema, PartitionStrategy strategy) {
     List<Schema.Field> partitionFields = new ArrayList<Schema.Field>();
-    for (FieldPartitioner<?, ?> fp : strategy.getFieldPartitioners()) {
+    for (FieldPartitioner<?, ?> fp : Accessor.getFieldPartitioners(strategy)) {
       partitionFields.add(partitionField(fp, schema));
     }
     Schema keySchema = Schema.createRecord(
@@ -278,7 +279,7 @@ public class SchemaUtil {
     Preconditions.checkArgument(descriptor.isPartitioned(),
         "Descriptor %s is not partitioned", descriptor);
     Preconditions.checkArgument(
-        descriptor.getPartitionStrategy().hasPartitioner(fieldName),
+        Accessor.hasPartitioner(descriptor.getPartitionStrategy(), fieldName),
         "Descriptor %s is not partitioned by '%s'", descriptor, fieldName);
   }
 

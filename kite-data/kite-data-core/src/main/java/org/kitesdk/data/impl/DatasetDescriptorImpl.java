@@ -54,6 +54,8 @@ import org.kitesdk.data.Formats;
 import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.ValidationException;
 import org.kitesdk.data.spi.ColumnMappingParser;
+import org.kitesdk.data.spi.DatasetDescriptorBuilderFactory;
+import org.kitesdk.data.spi.DatasetDescriptorFactory;
 import org.kitesdk.data.spi.DefaultConfiguration;
 import org.kitesdk.data.spi.FieldPartitioner;
 import org.kitesdk.data.spi.HadoopFileSystemURLStreamHandler;
@@ -78,7 +80,6 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
 
   private final Schema schema;
   private final URL schemaUrl;
-  private final URI schemaUri;
   private final Format format;
   private final URI location;
   private final Map<String, String> properties;
@@ -92,7 +93,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
    * {@link PartitionStrategy}, optional {@link ColumnMapping}, and optional
    * {@link CompressionType}.
    */
-  private DatasetDescriptorImpl(Schema schema, @Nullable URI schemaUri,
+  private DatasetDescriptorImpl(Schema schema, @Nullable URL schemaUrl,
       Format format, @Nullable URI location,
       @Nullable Map<String, String> properties,
       @Nullable PartitionStrategy partitionStrategy,
@@ -105,8 +106,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     checkCompressionType(format, compressionType);
 
     this.schema = schema;
-    this.schemaUri = schemaUri;
-    this.schemaUrl = toURL(schemaUri);
+    this.schemaUrl = schemaUrl;
     this.format = format;
     this.location = location;
     if (properties != null) {
@@ -331,7 +331,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     private URI defaultFS;
 
     private Schema schema;
-    private URI schemaUri;
+    private URL schemaUrl;
     private Format format = Formats.AVRO;
     private URI location;
     private Map<String, String> properties;
@@ -341,6 +341,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     private CompressionType compressionType;
 
     public Builder() {
+      super((DatasetDescriptor.Builder)null);
       this.properties = Maps.newHashMap();
       this.conf = DefaultConfiguration.get();
       try {
@@ -361,12 +362,13 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     public Builder(DatasetDescriptor descriptor) {
       this();
       this.schema = descriptor.getSchema();
-      this.schemaUri = toURI(descriptor.getSchemaUrl());
+      this.schemaUrl = descriptor.getSchemaUrl();
       this.format = descriptor.getFormat();
       this.location = descriptor.getLocation();
       this.copiedMapping = descriptor.getColumnMapping();
       this.compressionType = descriptor.getCompressionType();
-      this.partitionStrategy = descriptor.getPartitionStrategy();
+      this.partitionStrategy = descriptor.isPartitioned() ?
+          descriptor.getPartitionStrategy() : null;
       properties.putAll(getProperties(descriptor));
     }
 
@@ -424,7 +426,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
      * @since 0.8.0
      */
     public Builder schemaUri(URI uri) throws IOException {
-      this.schemaUri = qualifiedUri(uri);
+      this.schemaUrl = toURL(qualifiedUri(uri));
 
       InputStream in = null;
       boolean threw = true;
@@ -934,7 +936,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
       // TODO: verify that all fields have a mapping?
 
       return new DatasetDescriptorImpl(
-          schema, schemaUri, format, location, properties, partitionStrategy,
+          schema, schemaUrl, format, location, properties, partitionStrategy,
           columnMapping, compressionType);
     }
 
@@ -968,7 +970,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
         return;
       }
       // TODO: the exceptions thrown by this should all be ValidationException
-      for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+      for (FieldPartitioner fp : Accessor.getFieldPartitioners(strategy)) {
         if (fp instanceof ProvidedFieldPartitioner) {
           // provided partitioners are not based on the entity fields
           continue;
@@ -1033,7 +1035,7 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     }
     // verify that all key mapped fields have a corresponding id partitioner
     if (strategy != null) {
-      for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+      for (FieldPartitioner fp : Accessor.getFieldPartitioners(strategy)) {
         if (fp instanceof IdentityFieldPartitioner) {
           keyMappedFields.remove(fp.getSourceName());
         }
@@ -1056,14 +1058,6 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     return builder.build();
   }
 
-  private static URI toURI(@Nullable URL url) {
-    if (url == null) {
-      return null;
-    }
-    // throw IllegalArgumentException if the URL is not a URI
-    return URI.create(url.toExternalForm());
-  }
-
   private static URL toURL(@Nullable URI uri) {
     if (uri == null) {
       return null;
@@ -1081,20 +1075,22 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
     }
   }
 
-  static class DatasetDescriptorImplFactory implements DatasetDescriptorFactory {
+  public static class DatasetDescriptorImplFactory implements DatasetDescriptorFactory {
 
     @Override
     public DatasetDescriptor newDatasetDescriptor(Schema schema, URL schemaUrl,
         Format format, URI location, Map<String, String> properties,
         PartitionStrategy partitionStrategy) {
-      return new DatasetDescriptorImpl(schema, toURI(schemaUrl), format, location, properties, partitionStrategy, null, null);
+      return new DatasetDescriptorImpl(schema, schemaUrl, format,
+          location, properties, partitionStrategy, null, null);
     }
 
     @Override
     public DatasetDescriptor newDatasetDescriptor(Schema schema, URL schemaUrl,
         Format format, URI location, Map<String, String> properties,
         PartitionStrategy partitionStrategy, ColumnMapping columnMapping) {
-      return new DatasetDescriptorImpl(schema, toURI(schemaUrl), format, location, properties, partitionStrategy, columnMapping, null);
+      return new DatasetDescriptorImpl(schema, schemaUrl, format,
+          location, properties, partitionStrategy, columnMapping, null);
     }
 
     @Override
@@ -1102,12 +1098,13 @@ public class DatasetDescriptorImpl extends DatasetDescriptor {
         Format format, URI location, Map<String, String> properties,
         PartitionStrategy partitionStrategy, ColumnMapping columnMapping,
         CompressionType compressionType) {
-      return new DatasetDescriptorImpl(schema, schemaUri, format, location, properties, partitionStrategy, columnMapping, compressionType);
+      return new DatasetDescriptorImpl(schema, toURL(schemaUri), format, location,
+          properties, partitionStrategy, columnMapping, compressionType);
     }
     
   }
 
-  static class DatasetDescriptorImplBuilderFactory implements DatasetDescriptorBuilderFactory {
+  public static class DatasetDescriptorImplBuilderFactory implements DatasetDescriptorBuilderFactory {
 
     @Override
     public DatasetDescriptor.Builder newBuilder() {

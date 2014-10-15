@@ -78,7 +78,7 @@ class HiveExternalMetadataProvider extends HiveAbstractMetadataProvider {
     if (descriptor.getLocation() == null) {
       // create a new descriptor with the dataset's location
       newDescriptor = new DatasetDescriptor.Builder(descriptor)
-          .location(pathForDataset(namespace, name))
+          .location(pathForDataset(namespace, name).toUri()) // JGE: revert if we keep location(Path)
           .build();
     }
 

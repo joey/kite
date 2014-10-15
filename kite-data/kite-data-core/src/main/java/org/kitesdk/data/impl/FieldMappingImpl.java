@@ -23,6 +23,7 @@ import javax.annotation.concurrent.Immutable;
 import org.kitesdk.data.DatasetIOException;
 import org.kitesdk.data.FieldMapping;
 import org.kitesdk.data.spi.ColumnMappingParser;
+import org.kitesdk.data.spi.FieldMappingFactory;
 
 /**
  * Represents how to store a Schema field.
@@ -144,7 +145,7 @@ public class FieldMappingImpl extends FieldMapping {
     return ColumnMappingParser.toString(this);
   }
 
-  static final class FieldMappingImplFactory implements FieldMappingFactory {
+  public static final class FieldMappingImplFactory implements FieldMappingFactory {
 
     @Override
     public FieldMapping newFieldMapping(String fieldName,

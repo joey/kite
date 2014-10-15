@@ -47,6 +47,7 @@ import java.util.Properties;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.kitesdk.data.FormatFactory;
 
 /**
  * <p>
@@ -134,14 +135,14 @@ public class FileSystemMetadataProvider extends AbstractMetadataProvider {
     }
 
     if (properties.containsKey(FORMAT_FIELD_NAME)) {
-      builder.format(Accessor.getDefault().newFormat(
+      builder.format(FormatFactory.newFormat(
           properties.getProperty(FORMAT_FIELD_NAME)));
     }
     if (properties.containsKey(COMPRESSION_TYPE_FIELD_NAME)) {
       builder.compressionType(properties.getProperty(COMPRESSION_TYPE_FIELD_NAME));
     }
     if (properties.containsKey(PARTITION_EXPRESSION_FIELD_NAME)) {
-      builder.partitionStrategy(Accessor.getDefault().fromExpression(properties
+      builder.partitionStrategy(Accessor.fromExpression(properties
           .getProperty(PARTITION_EXPRESSION_FIELD_NAME)));
     }
     Path schemaPath = new Path(metadataPath, SCHEMA_FILE_NAME);
@@ -162,7 +163,7 @@ public class FileSystemMetadataProvider extends AbstractMetadataProvider {
       // the data and metadata were always co-located.
       location = expectedPathForDataset(namespace, name);
     }
-    builder.location(location);
+    builder.location(location.toUri()); // JGE: revert if we keep location(Path)
 
     // custom properties
     for (String property : properties.stringPropertyNames()) {
@@ -472,7 +473,7 @@ public class FileSystemMetadataProvider extends AbstractMetadataProvider {
 
     if (descriptor.isPartitioned()) {
       properties.setProperty(PARTITION_EXPRESSION_FIELD_NAME,
-          Accessor.getDefault().toExpression(descriptor.getPartitionStrategy()));
+          Accessor.toExpression(descriptor.getPartitionStrategy()));
     }
 
     // copy custom properties to the table

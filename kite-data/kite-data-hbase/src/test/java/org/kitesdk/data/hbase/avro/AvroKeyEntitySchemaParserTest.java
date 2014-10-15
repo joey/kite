@@ -23,6 +23,7 @@ import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.ValidationException;
 
 import static org.junit.Assert.assertEquals;
+import org.kitesdk.data.impl.Accessor;
 
 public class AvroKeyEntitySchemaParserTest {
 
@@ -49,8 +50,8 @@ public class AvroKeyEntitySchemaParserTest {
         .getField("keyPart1_copy").schema().getType());
     assertEquals(Type.STRING, avroKeySchema.getAvroSchema()
         .getField("keyPart2_copy").schema().getType());
-    assertEquals(2, avroKeySchema.getPartitionStrategy().getFieldPartitioners()
-        .size());
+    assertEquals(2, Accessor.getFieldPartitioners(avroKeySchema
+        .getPartitionStrategy()).size());
   }
 
   @Test
@@ -60,8 +61,8 @@ public class AvroKeyEntitySchemaParserTest {
     AvroKeySchema avroKeySchema = parser.parseKeySchema(entitySchema, strat);
     assertEquals(Type.INT, avroKeySchema.getAvroSchema().getField("keyPart1")
         .schema().getType());
-    assertEquals(1, avroKeySchema.getPartitionStrategy().getFieldPartitioners()
-        .size());
+    assertEquals(1, Accessor.getFieldPartitioners(avroKeySchema
+        .getPartitionStrategy()).size());
   }
 
   @Test

@@ -95,8 +95,8 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
     this.namespace = namespace;
     this.name = name;
     this.descriptor = descriptor;
-    this.partitionStrategy =
-        descriptor.isPartitioned() ? descriptor.getPartitionStrategy() : null;
+    this.partitionStrategy = descriptor.isPartitioned() ?
+        descriptor.getPartitionStrategy() : null;
     this.partitionListener = partitionListener;
     this.convert = new PathConversion(descriptor.getSchema());
     this.uri = uri;
@@ -211,8 +211,8 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
     }
 
     int partitionDepth = key.getLength();
-    PartitionStrategy subpartitionStrategy = Accessor.getDefault()
-        .getSubpartitionStrategy(partitionStrategy, partitionDepth);
+    PartitionStrategy subpartitionStrategy = Accessor.getSubpartitionStrategy(
+        partitionStrategy, partitionDepth);
 
     return new FileSystemDataset.Builder<E>()
         .namespace(namespace)
@@ -220,7 +220,7 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
         .fileSystem(fileSystem)
         .uri(uri)
         .descriptor(new DatasetDescriptor.Builder(descriptor)
-            .location(partitionDirectory)
+            .location(partitionDirectory.toUri()) // JGE: Revert if we keep location(Path)
             .partitionStrategy(subpartitionStrategy)
             .build())
         .type(type)
@@ -272,15 +272,15 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
     for (FileStatus stat : fileStatuses) {
       Path p = fileSystem.makeQualified(stat.getPath());
       PartitionKey key = keyFromDirectory(p.getName());
-      PartitionStrategy subPartitionStrategy = Accessor.getDefault()
-          .getSubpartitionStrategy(partitionStrategy, 1);
+      PartitionStrategy subPartitionStrategy = Accessor.getSubpartitionStrategy(
+          partitionStrategy, 1);
       Builder<E> builder = new FileSystemDataset.Builder<E>()
           .namespace(namespace)
           .name(name)
           .fileSystem(fileSystem)
           .uri(uri)
           .descriptor(new DatasetDescriptor.Builder(descriptor)
-              .location(p)
+              .location(p.toUri()) // JGE: Revert if we keep location(Path)
               .partitionStrategy(subPartitionStrategy)
               .build())
           .type(type)
@@ -351,7 +351,7 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
   private Path toDirectoryName(@Nullable Path dir, PartitionKey key) {
     Path result = dir;
     for (int i = 0; i < key.getLength(); i++) {
-      final FieldPartitioner fp = partitionStrategy.getFieldPartitioners().get(i);
+      final FieldPartitioner fp = Accessor.getFieldPartitioners(partitionStrategy).get(i);
       if (result != null) {
         result = new Path(result, PathConversion.dirnameForValue(fp, key.get(i)));
       } else {
@@ -367,7 +367,7 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
 
   @SuppressWarnings("unchecked")
   private PartitionKey keyFromDirectory(String name) {
-    final FieldPartitioner fp = partitionStrategy.getFieldPartitioners().get(0);
+    final FieldPartitioner fp = Accessor.getFieldPartitioners(partitionStrategy).get(0);
     final List<Object> values = Lists.newArrayList();
 
     if (partitionKey != null) {
@@ -397,7 +397,7 @@ public class FileSystemDataset<E> extends AbstractDataset<E> implements
       relDir = relDir.getParent();
     }
 
-    List<FieldPartitioner> fps = partitionStrategy.getFieldPartitioners();
+    List<FieldPartitioner> fps = Accessor.getFieldPartitioners(partitionStrategy);
     Preconditions.checkState(pathComponents.size() <= fps.size(),
         "Number of components in partition directory %s (%s) exceeds number of field " +
             "partitioners %s", dir, pathComponents, partitionStrategy);

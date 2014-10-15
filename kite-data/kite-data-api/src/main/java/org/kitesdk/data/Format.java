@@ -16,7 +16,7 @@
 package org.kitesdk.data;
 
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.EnumSet;
 import java.util.Set;
 import javax.annotation.concurrent.Immutable;
 
@@ -36,14 +36,14 @@ import javax.annotation.concurrent.Immutable;
 public class Format {
   private final String name;
   private final CompressionType defaultCompressionType;
-  private final Set<CompressionType> supportedCompressionTypes;
+  private final EnumSet<CompressionType> supportedCompressionTypes;
 
   Format(String name, CompressionType defaultCompressionType,
       CompressionType[] supportedCompressionTypes) {
     this.name = name;
     this.defaultCompressionType = defaultCompressionType;
-    this.supportedCompressionTypes = new HashSet<CompressionType>(supportedCompressionTypes.length);
-    this.supportedCompressionTypes.addAll(Arrays.asList(supportedCompressionTypes));
+    this.supportedCompressionTypes = EnumSet.copyOf(
+        Arrays.asList(supportedCompressionTypes));
   }
 
   /**
@@ -71,7 +71,7 @@ public class Format {
    * @since 0.17.0
    */
   public Set<CompressionType> getSupportedCompressionTypes() {
-    return supportedCompressionTypes;
+    return supportedCompressionTypes.clone();
   }
 
   /**

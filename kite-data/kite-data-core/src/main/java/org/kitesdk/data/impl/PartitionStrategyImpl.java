@@ -1,5 +1,5 @@
 /**
- * Copyright 2013 Cloudera Inc.
+ * Copyright 2014 Cloudera Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kitesdk.data;
+package org.kitesdk.data.impl;
 
-import org.kitesdk.data.spi.PartitionStrategyBuilderFactory;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
+import java.util.Map;
+import java.util.Set;
+import org.kitesdk.data.spi.PartitionStrategyParser;
+import org.kitesdk.data.spi.partition.DayOfMonthFieldPartitioner;
+import org.kitesdk.data.spi.partition.HourFieldPartitioner;
+import org.kitesdk.data.spi.partition.MinuteFieldPartitioner;
+import org.kitesdk.data.spi.partition.MonthFieldPartitioner;
+import org.kitesdk.data.spi.partition.PartitionFunctions;
+import java.util.List;
+
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
-import java.util.ServiceLoader;
+
+import org.kitesdk.data.spi.partition.HashFieldPartitioner;
+import org.kitesdk.data.spi.partition.IdentityFieldPartitioner;
+import org.kitesdk.data.spi.partition.IntRangeFieldPartitioner;
+import org.kitesdk.data.spi.partition.RangeFieldPartitioner;
+import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
+import org.kitesdk.data.PartitionStrategy;
+import org.kitesdk.data.spi.FieldPartitioner;
+import org.kitesdk.data.spi.PartitionStrategyBuilderFactory;
+import org.kitesdk.data.spi.PartitionerAccessor;
+import org.kitesdk.data.spi.partition.YearFieldPartitioner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,20 +58,45 @@ import org.slf4j.LoggerFactory;
  * <p>
  * You should use the inner {@link Builder} to create new instances.
  * </p>
- * 
+ *
  * @see DatasetDescriptor
  * @see Dataset
  */
 @Immutable
 @SuppressWarnings("deprecation")
-public abstract class PartitionStrategy {
+public class PartitionStrategyImpl extends PartitionStrategy implements PartitionerAccessor {
 
-  private static final Logger LOG = LoggerFactory.getLogger(PartitionStrategy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(PartitionStrategyImpl.class);
+
+  private final List<FieldPartitioner> fieldPartitioners;
+  private final Map<String, FieldPartitioner> partitionerMap;
+
+  @Override
+  public List<FieldPartitioner> getFieldPartitioners() {
+    return fieldPartitioners;
+  }
+
+  @Override
+  public FieldPartitioner getPartitioner(String name) {
+    return partitionerMap.get(name);
+  }
+
+  @Override
+  public boolean hasPartitioner(String name) {
+    return partitionerMap.containsKey(name);
+  }
 
   /**
-   * No argument constructor for sub-classes.
+   * Construct a partition strategy with a list of field partitioners.
    */
-  protected PartitionStrategy() {
+  PartitionStrategyImpl(List<FieldPartitioner> partitioners) {
+    this.fieldPartitioners = ImmutableList.copyOf(partitioners);
+    ImmutableMap.Builder<String, FieldPartitioner> mapBuilder =
+        ImmutableMap.builder();
+    for (FieldPartitioner fp : partitioners) {
+      mapBuilder.put(fp.getName(), fp);
+    }
+    this.partitionerMap = mapBuilder.build();
   }
 
   /**
@@ -63,40 +111,82 @@ public abstract class PartitionStrategy {
    * </p>
    * <p>
    * <strong>Warning:</strong> This method is allowed to lie and should be
-   * treated only as a hint. Some partition functions are fixed (for example, 
+   * treated only as a hint. Some partition functions are fixed (for example,
    * hash modulo number of buckets), while others are open-ended (for
    * example, discrete value) and depend on the input data.
    * </p>
-   * 
+   *
    * @return The estimated (or possibly concrete) number of leaf partitions.
    */
-  public abstract int getCardinality();
+  @Override
+  public int getCardinality() {
+    int cardinality = 1;
+    for (FieldPartitioner fieldPartitioner : fieldPartitioners) {
+      if (fieldPartitioner.getCardinality() == FieldPartitioner.UNKNOWN_CARDINALITY) {
+        return FieldPartitioner.UNKNOWN_CARDINALITY;
+      }
+      cardinality *= fieldPartitioner.getCardinality();
+    }
+    return cardinality;
+  }
 
   /**
    * Return a {@link PartitionStrategy} for subpartitions starting at the given
    * index.
    */
-  protected abstract PartitionStrategy getSubpartitionStrategy(int startIndex);
+  @Override
+  public PartitionStrategy getSubpartitionStrategy(int startIndex) {
+    if (startIndex == 0) {
+      return this;
+    }
+    if (startIndex >= fieldPartitioners.size()) {
+      return null;
+    }
+    return new PartitionStrategyImpl(fieldPartitioners.subList(startIndex,
+        fieldPartitioners.size()));
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || !getClass().equals(o.getClass())) {
+      return false;
+    }
+    PartitionStrategyImpl that = (PartitionStrategyImpl) o;
+    return Objects.equal(this.fieldPartitioners, that.fieldPartitioners);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(fieldPartitioners);
+  }
+
+  @Override
+  public String toString() {
+    return PartitionStrategyParser.toString(this, false);
+  }
 
   /**
    * @param pretty {@code true} to indent and format JSON
    * @return this PartitionStrategy as its JSON representation
    */
-  public abstract String toString(boolean pretty);
+  @Override
+  public String toString(boolean pretty) {
+    return PartitionStrategyParser.toString(this, pretty);
+  }
 
   /**
    * A fluent builder to aid in the construction of {@link PartitionStrategy}s.
    */
-  public static class Builder {
+  public static class Builder extends PartitionStrategy.Builder {
 
-    private final Builder delegate;
+    private final List<FieldPartitioner> fieldPartitioners = Lists.newArrayList();
+    private final Set<String> names = Sets.newHashSet();
 
     public Builder() {
-      delegate = PARTITION_STRATEGY_BUILDER_FACTORY.newBuilder();
-    }
-
-    protected Builder(@Nullable Builder delegate) {
-      this.delegate = delegate;
+      super(null);
     }
 
     /**
@@ -113,8 +203,10 @@ public abstract class PartitionStrategy {
      *          The number of buckets into which data is to be partitioned.
      * @return An instance of the builder for method chaining.
      */
+    @Override
     public Builder hash(String sourceName, int buckets) {
-      return delegate.hash(sourceName, buckets);
+      add(new HashFieldPartitioner(sourceName, buckets));
+      return this;
     }
 
     /**
@@ -133,8 +225,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder hash(String sourceName, @Nullable String name, int buckets) {
-      return delegate.hash(sourceName, name, buckets);
+      add(new HashFieldPartitioner(sourceName, name, buckets));
+      return this;
     }
 
     /**
@@ -152,8 +246,10 @@ public abstract class PartitionStrategy {
      * @since 0.14.0
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Builder identity(String sourceName) {
-      return delegate.identity(sourceName);
+      add(new IdentityFieldPartitioner(sourceName, Object.class));
+      return this;
     }
 
     /**
@@ -167,11 +263,14 @@ public abstract class PartitionStrategy {
      * @param name
      *          A name for the partition field
      * @return An instance of the builder for method chaining.
+     * @see IdentityFieldPartitioner
      * @since 0.14.0
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Builder identity(String sourceName, String name) {
-      return delegate.identity(sourceName, name);
+      add(new IdentityFieldPartitioner(sourceName, name, Object.class));
+      return this;
     }
 
     /**
@@ -190,11 +289,14 @@ public abstract class PartitionStrategy {
      *          the number of discrete values for the field {@code name} in the
      *          data).
      * @return An instance of the builder for method chaining.
+     * @see IdentityFieldPartitioner
      * @since 0.14.0
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Builder identity(String sourceName, int cardinalityHint) {
-      return delegate.identity(sourceName, cardinalityHint);
+      add(new IdentityFieldPartitioner(sourceName, Object.class, cardinalityHint));
+      return this;
     }
 
     /**
@@ -213,11 +315,14 @@ public abstract class PartitionStrategy {
      *          the number of discrete values for the field {@code name} in the
      *          data).
      * @return An instance of the builder for method chaining.
+     * @see IdentityFieldPartitioner
      * @since 0.14.0
      */
     @SuppressWarnings("unchecked")
+    @Override
     public Builder identity(String sourceName, String name, int cardinalityHint) {
-      return delegate.identity(sourceName, name, cardinalityHint);
+      add(new IdentityFieldPartitioner(sourceName, name, Object.class, cardinalityHint));
+      return this;
     }
 
     /**
@@ -233,9 +338,12 @@ public abstract class PartitionStrategy {
      * @param upperBounds
      *          A variadic list of upper bounds of each partition.
      * @return An instance of the builder for method chaining.
+     * @see IntRangeFieldPartitioner
      */
+    @Override
     public Builder range(String sourceName, int... upperBounds) {
-      return delegate.range(sourceName, upperBounds);
+      add(new IntRangeFieldPartitioner(sourceName, upperBounds));
+      return this;
     }
 
     /**
@@ -252,8 +360,10 @@ public abstract class PartitionStrategy {
      *          A variadic list of upper bounds of each partition.
      * @return An instance of the builder for method chaining.
      */
+    @Override
     public Builder range(String sourceName, String... upperBounds) {
-      return delegate.range(sourceName, upperBounds);
+      add(new RangeFieldPartitioner(sourceName, upperBounds));
+      return this;
     }
 
     /**
@@ -269,8 +379,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder year(String sourceName, @Nullable String name) {
-      return delegate.year(sourceName, name);
+      add(new YearFieldPartitioner(sourceName, name));
+      return this;
     }
 
     /**
@@ -283,8 +395,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.8.0
      */
+    @Override
     public Builder year(String sourceName) {
-      return delegate.year(sourceName);
+      add(new YearFieldPartitioner(sourceName));
+      return this;
     }
 
     /**
@@ -300,8 +414,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder month(String sourceName, @Nullable String name) {
-      return delegate.month(sourceName, name);
+      add(new MonthFieldPartitioner(sourceName, name));
+      return this;
     }
 
     /**
@@ -314,8 +430,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.8.0
      */
+    @Override
     public Builder month(String sourceName) {
-      return delegate.month(sourceName);
+      add(new MonthFieldPartitioner(sourceName));
+      return this;
     }
 
     /**
@@ -331,8 +449,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder day(String sourceName, @Nullable String name) {
-      return delegate.day(sourceName, name);
+      add(new DayOfMonthFieldPartitioner(sourceName, name));
+      return this;
     }
 
     /**
@@ -345,8 +465,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.8.0
      */
+    @Override
     public Builder day(String sourceName) {
-      return delegate.day(sourceName);
+      add(new DayOfMonthFieldPartitioner(sourceName));
+      return this;
     }
 
     /**
@@ -362,8 +484,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder hour(String sourceName, @Nullable String name) {
-      return delegate.hour(sourceName, name);
+      add(new HourFieldPartitioner(sourceName, name));
+      return this;
     }
 
     /**
@@ -376,8 +500,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.8.0
      */
+    @Override
     public Builder hour(String sourceName) {
-      return delegate.hour(sourceName);
+      add(new HourFieldPartitioner(sourceName));
+      return this;
     }
 
     /**
@@ -393,8 +519,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.3.0
      */
+    @Override
     public Builder minute(String sourceName, @Nullable String name) {
-      return delegate.minute(sourceName, name);
+      add(new MinuteFieldPartitioner(sourceName, name));
+      return this;
     }
 
     /**
@@ -407,8 +535,10 @@ public abstract class PartitionStrategy {
      * @return An instance of the builder for method chaining.
      * @since 0.8.0
      */
+    @Override
     public Builder minute(String sourceName) {
-      return delegate.minute(sourceName);
+      add(new MinuteFieldPartitioner(sourceName));
+      return this;
     }
 
     /**
@@ -424,8 +554,10 @@ public abstract class PartitionStrategy {
      * @return This builder for method chaining.
      * @since 0.9.0
      */
+    @Override
     public Builder dateFormat(String sourceName, String name, String format) {
-      return delegate.dateFormat(sourceName, name, format);
+      add(PartitionFunctions.dateFormat(sourceName, name, format));
+      return this;
     }
 
     /**
@@ -439,8 +571,10 @@ public abstract class PartitionStrategy {
      *
      * @since 0.17.0
      */
+    @Override
     public Builder provided(String name) {
-      return delegate.provided(name);
+      add(PartitionFunctions.provided(name, null));
+      return this;
     }
 
     /**
@@ -458,8 +592,10 @@ public abstract class PartitionStrategy {
      *
      * @since 0.17.0
      */
+    @Override
     public Builder provided(String name, @Nullable String valuesType) {
-      return delegate.provided(name, valuesType);
+      add(PartitionFunctions.provided(name, valuesType));
+      return this;
     }
 
     /**
@@ -471,31 +607,31 @@ public abstract class PartitionStrategy {
      * @return The configured instance of {@link PartitionStrategy}.
      * @since 0.9.0
      */
+    @Override
     public PartitionStrategy build() {
-      return delegate.build();
+      return new PartitionStrategyImpl(fieldPartitioners);
+    }
+
+    private void add(FieldPartitioner fp) {
+      // in 0.14.0, change to a Precondition
+      //Preconditions.checkState(!names.contains(fp.getName()),
+      //    "Partition name conflicts with an existing field or partition name");
+      if (names.contains(fp.getName())) {
+        LOG.warn(
+            "Partition name conflicts with an existing partition name");
+      }
+      fieldPartitioners.add(fp);
+      names.add(fp.getName());
     }
   }
 
-  private static final PartitionStrategyBuilderFactory PARTITION_STRATEGY_BUILDER_FACTORY;
+  public static class PartitionStrategyImplBuilderFactory implements PartitionStrategyBuilderFactory {
 
-
-  static {
-    ServiceLoader<PartitionStrategyBuilderFactory> factories =
-        ServiceLoader.load(PartitionStrategyBuilderFactory.class);
-
-    PartitionStrategyBuilderFactory selectedFactory = null;
-    for (PartitionStrategyBuilderFactory factory : factories) {
-      LOG.debug("Using {} for building PartitionStrategy implementations",
-          factory.getClass());
-      selectedFactory = factory;
-      break;
+    @Override
+    public Builder newBuilder() {
+      return new Builder();
     }
 
-    if (selectedFactory == null) {
-      throw new RuntimeException();
-    }
-
-    PARTITION_STRATEGY_BUILDER_FACTORY = selectedFactory;
   }
 
 }

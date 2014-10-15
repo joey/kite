@@ -56,7 +56,7 @@ public class TestFileSystemDatasetPartitionKeyForPath {
         .uri(URI.create("test"))
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)

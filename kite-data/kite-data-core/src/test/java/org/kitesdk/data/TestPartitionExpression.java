@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data;
 
+import org.kitesdk.data.impl.PartitionExpression;
 import org.junit.Ignore;
 import org.kitesdk.data.spi.FieldPartitioner;
 import org.kitesdk.data.spi.partition.HashFieldPartitioner;
@@ -23,6 +24,7 @@ import org.kitesdk.data.spi.partition.YearFieldPartitioner;
 import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
+import org.kitesdk.data.impl.Accessor;
 
 public class TestPartitionExpression {
 
@@ -32,7 +34,7 @@ public class TestPartitionExpression {
     PartitionExpression expression = new PartitionExpression(expr, true);
 
     PartitionStrategy strategy = expression.evaluate();
-    List<FieldPartitioner> fieldPartitioners = strategy.getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(strategy);
     Assert.assertEquals(1, fieldPartitioners.size());
     FieldPartitioner fp = fieldPartitioners.get(0);
     Assert.assertEquals(HashFieldPartitioner.class, fp.getClass());
@@ -50,7 +52,7 @@ public class TestPartitionExpression {
     PartitionExpression expression = new PartitionExpression(expr, true);
 
     PartitionStrategy strategy = expression.evaluate();
-    List<FieldPartitioner> fieldPartitioners = strategy.getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(strategy);
     Assert.assertEquals(2, fieldPartitioners.size());
 
     FieldPartitioner fp0 = fieldPartitioners.get(0);
@@ -72,7 +74,7 @@ public class TestPartitionExpression {
     PartitionExpression expression = new PartitionExpression(expr, true);
 
     PartitionStrategy strategy = expression.evaluate();
-    List<FieldPartitioner> fieldPartitioners = strategy.getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(strategy);
     Assert.assertEquals(2, fieldPartitioners.size());
 
     FieldPartitioner fp0 = fieldPartitioners.get(0);

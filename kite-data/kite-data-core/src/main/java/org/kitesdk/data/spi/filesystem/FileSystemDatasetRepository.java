@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.kitesdk.data.spi.TemporaryDatasetRepository;
 import org.kitesdk.data.spi.TemporaryDatasetRepositoryAccessor;
 import org.kitesdk.data.URIBuilder;
+import org.kitesdk.data.impl.Accessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +130,7 @@ public class FileSystemDatasetRepository extends AbstractDatasetRepository
     DatasetDescriptor newDescriptor = descriptor;
     if (descriptor.getLocation() == null) {
       newDescriptor = new DatasetDescriptor.Builder(descriptor)
-          .location(suggestedLocation) // may be overridden by MetadataProvider
+          .location(suggestedLocation.toUri()) // may be overridden by MetadataProvider
           .build();
     }
 
@@ -331,7 +332,7 @@ public class FileSystemDatasetRepository extends AbstractDatasetRepository
     Iterable<String> parts = Splitter.on('/').split(relativizedUri.getPath());
 
     PartitionStrategy partitionStrategy = dataset.getDescriptor().getPartitionStrategy();
-    List<FieldPartitioner> fieldPartitioners = partitionStrategy.getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(partitionStrategy);
     if (Iterables.size(parts) > fieldPartitioners.size()) {
       throw new IllegalArgumentException(String.format("Too many partition directories " +
           "for %s (%s), expecting %s.", partitionUri, Iterables.size(parts),

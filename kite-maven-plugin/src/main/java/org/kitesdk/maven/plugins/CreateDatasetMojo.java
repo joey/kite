@@ -30,9 +30,8 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.Datasets;
 import org.kitesdk.data.Formats;
-import org.kitesdk.data.impl.Accessor;
+import org.kitesdk.data.impl.PartitionExpression;
 import org.kitesdk.data.spi.DatasetRepository;
-import org.kitesdk.data.spi.PartitionStrategyParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,8 +128,8 @@ public class CreateDatasetMojo extends AbstractDatasetMojo {
             + partitionStrategyFile, e);
       }
     } else if (partitionExpression != null) {
-      descriptorBuilder.partitionStrategy(Accessor.getDefault().fromExpression(
-          partitionExpression));
+      descriptorBuilder.partitionStrategy(new PartitionExpression(
+          partitionExpression, true).evaluate());
     }
 
     if (columnDescriptorFile != null) {

@@ -27,6 +27,7 @@ import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.RandomAccessDataset;
 import org.kitesdk.data.RefinableView;
 import org.kitesdk.data.hbase.impl.Dao;
+import org.kitesdk.data.impl.Accessor;
 import org.kitesdk.data.spi.AbstractDataset;
 import org.kitesdk.data.spi.Constraints;
 import org.kitesdk.data.spi.InputFormatAccessor;
@@ -125,7 +126,7 @@ class DaoDataset<E> extends AbstractDataset<E> implements RandomAccessDataset<E>
 
   @Deprecated
   static PartitionKey keyFor(PartitionStrategy strategy, Key key) {
-    final int size = strategy.getFieldPartitioners().size();
+    final int size = Accessor.getFieldPartitioners(strategy).size();
     final Object[] values = new Object[size];
 
     for (int i = 0; i < size; i += 1) {

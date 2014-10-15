@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import org.kitesdk.data.impl.Accessor;
 
 class FileSystemPartitionIterator implements
     Iterator<Pair<StorageKey, Path>>, Iterable<Pair<StorageKey, Path>> {
@@ -93,7 +94,7 @@ class FileSystemPartitionIterator implements
     private final PathConversion convert;
 
     public MakeKey(PartitionStrategy strategy, Schema schema) {
-      this.partitioners = strategy.getFieldPartitioners();
+      this.partitioners = Accessor.getFieldPartitioners(strategy);
       this.reusableKey = new StorageKey(strategy);
       this.convert = new PathConversion(schema);
     }
@@ -144,7 +145,7 @@ class FileSystemPartitionIterator implements
     this.rootDirectory = root;
     this.iterator = Iterators.filter(
         Iterators.transform(
-            new FileSystemIterator(strategy.getFieldPartitioners().size()),
+            new FileSystemIterator(Accessor.getFieldPartitioners(strategy).size()),
             new MakeKey(strategy, schema)),
         new KeyPredicate(constraints.toKeyPredicate()));
   }

@@ -45,6 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.kitesdk.data.CompressionType;
 import org.kitesdk.data.TestHelpers;
+import org.kitesdk.data.impl.Accessor;
 import org.kitesdk.data.spi.PartitionedDataset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +109,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schemaUri(USER_SCHEMA_URL)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -134,7 +135,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -182,7 +183,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -238,7 +239,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
             .format(format)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -262,7 +263,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -292,7 +293,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -337,7 +338,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -357,7 +358,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(newTestDirectory)
+            .location(newTestDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -382,7 +383,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
             .format(Formats.AVRO)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -393,7 +394,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
             .format(Formats.PARQUET)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -408,7 +409,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .configuration(getConfiguration())
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(new PartitionStrategy.Builder()
                 .hash("username", 2).build())
             .build())
@@ -420,7 +421,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .configuration(getConfiguration())
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(new PartitionStrategy.Builder()
                 .hash("username", 2).hash("email", 3).build())
             .build())
@@ -437,7 +438,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .configuration(getConfiguration())
         .descriptor(new DatasetDescriptor.Builder()
             .schema(STRING_SCHEMA)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -447,7 +448,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .configuration(getConfiguration())
         .descriptor(new DatasetDescriptor.Builder()
             .schema(USER_SCHEMA)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -464,7 +465,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .build())
         .type(Record.class)
         .build();
@@ -488,7 +489,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
             .schema(USER_SCHEMA)
             .format(format)
             .compressionType(compressionType)
-            .location(testDirectory)
+            .location(testDirectory.toUri()) // JGE: revert if we keep location(Path)
             .partitionStrategy(partitionStrategy)
             .build())
         .type(Record.class)
@@ -545,7 +546,7 @@ public class TestFileSystemDataset extends MiniDFSTest {
         .configuration(getConfiguration())
         .descriptor(
             new DatasetDescriptor.Builder().schema(USER_SCHEMA).format(format)
-                .location(testDirectory).build())
+                .location(testDirectory.toUri()).build()) // JGE: revert if we keep location(Path)
         .type(Record.class)
         .build();
     
@@ -564,8 +565,9 @@ public class TestFileSystemDataset extends MiniDFSTest {
     try {
       PartitionedDataset<Record> partition = ds.getPartition(key, false);
       if (subpartitionName != null) {
-        List<FieldPartitioner> fieldPartitioners = partition.getDescriptor()
-            .getPartitionStrategy().getFieldPartitioners();
+        List<FieldPartitioner> fieldPartitioners = Accessor
+            .getFieldPartitioners(partition.getDescriptor()
+                .getPartitionStrategy());
         Assert.assertEquals(1, fieldPartitioners.size());
         Assert.assertEquals(subpartitionName, fieldPartitioners.get(0)
             .getName());

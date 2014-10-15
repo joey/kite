@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Cloudera Inc.
+ * Copyright 2014 Cloudera Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.kitesdk.data.impl;
 
+import org.kitesdk.data.spi.DatasetsInterface;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import java.net.URI;
@@ -40,7 +41,7 @@ import org.kitesdk.data.spi.Registration;
  *
  * @since 0.18.0
  */
-public class DatasetsImpl {
+public class DatasetsImpl implements DatasetsInterface {
 
   /**
    * Load a {@link Dataset} or {@link View} for the given {@link URI}.
@@ -57,6 +58,7 @@ public class DatasetsImpl {
    * @return a {@code View} for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <E, V extends View<E>> V load(URI uri, Class<E> type) {
     boolean isView = URIBuilder.VIEW_SCHEME.equals(uri.getScheme());
     Preconditions.checkArgument(isView ||
@@ -96,6 +98,7 @@ public class DatasetsImpl {
    * @return a {@code View} for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <V extends View<GenericRecord>> V load(URI uri) {
     return (V) load(uri, GenericRecord.class);
   }
@@ -114,6 +117,7 @@ public class DatasetsImpl {
    * @param <V> The type of {@code View} expected.
    * @return a {@code View} for the given URI.
    */
+  @Override
   public <E, V extends View<E>> V load(String uriString, Class<E> type) {
     return (V) load(URI.create(uriString), type);
   }
@@ -130,6 +134,7 @@ public class DatasetsImpl {
    * @param <V> The type of {@code View} expected.
    * @return a {@code View} for the given URI.
    */
+  @Override
   public <V extends View<GenericRecord>> V load(String uriString) {
     return (V) load(uriString, GenericRecord.class);
   }
@@ -147,6 +152,7 @@ public class DatasetsImpl {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <E, V extends View<E>> V create(URI uri, DatasetDescriptor descriptor, Class<E> type) {
     boolean isView = URIBuilder.VIEW_SCHEME.equals(uri.getScheme());
     Preconditions.checkArgument(isView ||
@@ -189,6 +195,7 @@ public class DatasetsImpl {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <V extends View<GenericRecord>> V create(URI uri, DatasetDescriptor descriptor) {
     return (V) create(
         uri, descriptor, GenericRecord.class);
@@ -206,6 +213,7 @@ public class DatasetsImpl {
    * @param <V> The type of {@code Dataset} or {@code View} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
+  @Override
   public <E, V extends View<E>> V create(String uri, DatasetDescriptor descriptor, Class<E> type) {
     return (V) create(URI.create(uri), descriptor, type);
   }
@@ -221,6 +229,7 @@ public class DatasetsImpl {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <V extends View<GenericRecord>> V create(String uri, DatasetDescriptor descriptor) {
     return (V) create(
         uri, descriptor, GenericRecord.class);
@@ -239,6 +248,7 @@ public class DatasetsImpl {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <E, D extends Dataset<E>> D update(
       URI uri, DatasetDescriptor descriptor, Class<E> type) {
     Preconditions.checkArgument(
@@ -269,6 +279,7 @@ public class DatasetsImpl {
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public <D extends Dataset<GenericRecord>> D update(
       URI uri, DatasetDescriptor descriptor) {
     return (D) update(
@@ -287,6 +298,7 @@ public class DatasetsImpl {
    * @param <D> The type of {@code Dataset} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
+  @Override
   public <E, D extends Dataset<E>> D update(String uri, DatasetDescriptor descriptor, Class<E> type) {
     return (D) update(URI.create(uri), descriptor, type);
   }
@@ -301,6 +313,7 @@ public class DatasetsImpl {
    * @param <D> The type of {@code Dataset} expected.
    * @return a newly created {@code Dataset} responsible for the given URI.
    */
+  @Override
   public <D extends Dataset<GenericRecord>> D update(String uri, DatasetDescriptor descriptor) {
     return (D) update(uri, descriptor, GenericRecord.class);
   }
@@ -314,6 +327,7 @@ public class DatasetsImpl {
    * @param uri a {@code Dataset} URI.
    * @return {@code true} if any data or metadata was removed, or {@code false}
    */
+  @Override
   public boolean delete(URI uri) {
     Preconditions.checkArgument(
         URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
@@ -338,6 +352,7 @@ public class DatasetsImpl {
    * @param uri a {@code Dataset} URI string.
    * @return {@code true} if any data or metadata was removed, or {@code false}
    */
+  @Override
   public boolean delete(String uri) {
     return delete(URI.create(uri));
   }
@@ -351,6 +366,7 @@ public class DatasetsImpl {
    * @param uri a {@code Dataset} URI.
    * @return {@code true} if the dataset exists, {@code false} otherwise
    */
+  @Override
   public boolean exists(URI uri) {
     Preconditions.checkArgument(
         URIBuilder.DATASET_SCHEME.equals(uri.getScheme()),
@@ -375,6 +391,7 @@ public class DatasetsImpl {
    * @param uri a {@code Dataset} URI string.
    * @return {@code true} if the dataset exists, {@code false} otherwise
    */
+  @Override
   public boolean exists(String uri) {
     return exists(URI.create(uri));
   }
@@ -388,6 +405,7 @@ public class DatasetsImpl {
    * @param uri a {@code DatasetRepository} URI
    * @return the URIs present in the {@code DatasetRepository}
    */
+  @Override
   public Collection<URI> list(URI uri) {
     boolean isRepo = URIBuilder.REPO_SCHEME.equals(uri.getScheme());
     Preconditions.checkArgument(isRepo, "Not a repository URI: " + uri);
@@ -415,6 +433,7 @@ public class DatasetsImpl {
    * @param uri a {@code DatasetRepository} URI string
    * @return the URIs present in the {@code DatasetRepository}
    */
+  @Override
   public Collection<URI> list(String uri) {
     return list(URI.create(uri));
   }

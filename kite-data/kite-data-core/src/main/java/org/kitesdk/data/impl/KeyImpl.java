@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.kitesdk.data.Key;
+import org.kitesdk.data.spi.KeyBuilderFactory;
 import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.RandomAccessDataset;
 import org.kitesdk.data.spi.FieldPartitioner;
@@ -94,7 +95,7 @@ public class KeyImpl extends Key {
       this.schema = dataset.getDescriptor().getSchema();
       this.strategy = dataset.getDescriptor().getPartitionStrategy();
       this.fieldNames = Sets.newHashSet();
-      for (FieldPartitioner fp : strategy.getFieldPartitioners()) {
+      for (FieldPartitioner fp : Accessor.getFieldPartitioners(strategy)) {
         fieldNames.add(fp.getSourceName());
         fieldNames.add(fp.getName());
       }
@@ -123,7 +124,7 @@ public class KeyImpl extends Key {
     @SuppressWarnings("unchecked")
     @Override
     public Key build() {
-      final List<FieldPartitioner> partitioners = strategy.getFieldPartitioners();
+      final List<FieldPartitioner> partitioners = Accessor.getFieldPartitioners(strategy);
       final List<Object> content = Lists.newArrayListWithCapacity(partitioners.size());
       for (FieldPartitioner fp : partitioners) {
         content.add(valueFor(fp));
@@ -147,7 +148,7 @@ public class KeyImpl extends Key {
       }
     }
 
-    static class KeyImplBuilderFactory implements KeyBuilderFactory {
+    public static class KeyImplBuilderFactory implements KeyBuilderFactory {
 
       @Override
       public Key.Builder newKeyBuilder(RandomAccessDataset dataset) {

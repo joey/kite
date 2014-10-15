@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kitesdk.data;
+package org.kitesdk.data.impl;
 
 import org.kitesdk.data.spi.partition.PartitionFunctions;
 import com.google.common.base.Objects;
@@ -23,17 +23,18 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.jexl2.Expression;
 import org.apache.commons.jexl2.JexlEngine;
+import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.spi.FieldPartitioner;
 
 /**
  * Internal utility class for persisting partition strategies,
  * not a part of the public API.
  */
-class PartitionExpression {
+public class PartitionExpression {
 
-  private JexlEngine engine;
-  private Expression expression;
-  private boolean isStrict;
+  private final JexlEngine engine;
+  private final Expression expression;
+  private final boolean isStrict;
 
   public PartitionExpression(String expression, boolean isStrict) {
     this.engine = new JexlEngine();
@@ -50,7 +51,7 @@ class PartitionExpression {
   public PartitionStrategy evaluate() {
     Object object = expression.evaluate(null);
     if (object instanceof FieldPartitioner) {
-      return new PartitionStrategy(
+      return new PartitionStrategyImpl(
           Lists.newArrayList((FieldPartitioner) object));
     } else if (object instanceof Object[]) {
       /*
@@ -61,7 +62,7 @@ class PartitionExpression {
       for (Object o : ((Object[]) object)) {
         partitioners.add((FieldPartitioner) o);
       }
-      return new PartitionStrategy(partitioners);
+      return new PartitionStrategyImpl(partitioners);
     } else {
       throw new IllegalArgumentException(
           "Partition expression did not produce FieldPartitioner result (or array) for value:"
@@ -75,8 +76,8 @@ class PartitionExpression {
    * passed as an object.
    */
   public static String toExpression(PartitionStrategy partitionStrategy) {
-    List<FieldPartitioner> fieldPartitioners = partitionStrategy
-        .getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(
+        partitionStrategy);
     if (fieldPartitioners.size() == 1) {
       return PartitionFunctions.toExpression(fieldPartitioners.get(0));
     }

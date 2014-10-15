@@ -39,6 +39,7 @@ import org.kitesdk.data.spi.Marker;
 import org.kitesdk.data.spi.MarkerRange;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.kitesdk.data.impl.Accessor;
 
 class DaoView<E> extends AbstractRefinableView<E> implements InputFormatAccessor<E> {
 
@@ -190,7 +191,7 @@ class DaoView<E> extends AbstractRefinableView<E> implements InputFormatAccessor
   @Deprecated
   @SuppressWarnings("unchecked")
   static PartitionKey keyFor(PartitionStrategy strategy, Marker marker) {
-    final List<FieldPartitioner> partitioners = strategy.getFieldPartitioners();
+    final List<FieldPartitioner> partitioners = Accessor.getFieldPartitioners(strategy);
     final Object[] values = new Object[partitioners.size()];
 
     for (int i = 0, n = partitioners.size(); i < n; i += 1) {

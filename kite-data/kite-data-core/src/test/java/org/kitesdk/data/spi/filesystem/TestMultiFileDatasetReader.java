@@ -34,6 +34,7 @@ import org.junit.Test;
 import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.*;
 import org.kitesdk.data.impl.Accessor;
 import org.apache.avro.generic.GenericData;
+import org.kitesdk.data.FormatFactory;
 import org.kitesdk.data.spi.Constraints;
 import org.kitesdk.data.spi.DataModelUtil;
 import org.kitesdk.data.spi.EntityAccessor;
@@ -129,7 +130,7 @@ public class TestMultiFileDatasetReader extends TestDatasetReaders {
   public void testUnknownFormat() throws IOException {
     final DatasetDescriptor descriptor = new DatasetDescriptor.Builder()
         .schema(STRING_SCHEMA)
-        .format(Accessor.getDefault().newFormat("explode!"))
+        .format(FormatFactory.newFormat("explode!"))
         .build();
 
     MultiFileDatasetReader<Record> reader = new MultiFileDatasetReader<Record>(

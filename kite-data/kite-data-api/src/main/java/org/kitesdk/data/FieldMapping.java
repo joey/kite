@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data;
 
+import org.kitesdk.data.spi.FieldMappingFactory;
 import java.util.ServiceLoader;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -111,13 +112,6 @@ public abstract class FieldMapping {
 
   private final static FieldMappingFactory FIELD_MAPPING_FACTORY;
 
-  protected static interface FieldMappingFactory {
-
-    public FieldMapping newFieldMapping(String fieldName,
-        MappingType mappingType, @Nullable String family,
-        @Nullable String qualifier, @Nullable String prefix);
-
-  }
 
   static {
     ServiceLoader<FieldMappingFactory> factories =

@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.junit.Assert.assertEquals;
+import org.kitesdk.data.impl.Accessor;
 
 public class TestPartitionStrategy {
 
@@ -58,7 +59,7 @@ public class TestPartitionStrategy {
         .hash("userId", 7)
         .build();
 
-    List<FieldPartitioner> fieldPartitioners = p.getFieldPartitioners();
+    List<FieldPartitioner> fieldPartitioners = Accessor.getFieldPartitioners(p);
     Assert.assertEquals(2, fieldPartitioners.size());
 
     FieldPartitioner fp0 = fieldPartitioners.get(0);

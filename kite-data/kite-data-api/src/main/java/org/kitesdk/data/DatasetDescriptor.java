@@ -15,6 +15,8 @@
  */
 package org.kitesdk.data;
 
+import org.kitesdk.data.spi.DatasetDescriptorBuilderFactory;
+import org.kitesdk.data.spi.DatasetDescriptorFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -251,6 +253,11 @@ public class DatasetDescriptor {
     return (delegate.equals(other.delegate));
   }
 
+  @Override
+  public int hashCode() {
+    return delegate.hashCode();
+  }
+
   /**
    * A fluent builder to aid in the construction of {@link DatasetDescriptor}s.
    */
@@ -272,6 +279,15 @@ public class DatasetDescriptor {
      */
     public Builder(DatasetDescriptor descriptor) {
       delegate = DATASET_DESRIPTOR_BUILDER_FACTORY.newBuilder(descriptor);
+    }
+
+    /**
+     * Provided for sub-classes to skip delegate lookup
+     *
+     * @param delegate
+     */
+    protected Builder(@Nullable Builder delegate) {
+      this.delegate = delegate;
     }
 
     /**
@@ -737,55 +753,29 @@ public class DatasetDescriptor {
 
   private static final DatasetDescriptorFactory DATASET_DESCRIPTOR_FACTORY;
 
-  protected static interface DatasetDescriptorFactory {
-
-    public DatasetDescriptor newDatasetDescriptor(Schema schema,
-        @Nullable URL schemaUrl, Format format, @Nullable URI location,
-        @Nullable Map<String, String> properties,
-        @Nullable PartitionStrategy partitionStrategy);
-
-    public DatasetDescriptor newDatasetDescriptor(Schema schema,
-        @Nullable URL schemaUrl, Format format, @Nullable URI location,
-        @Nullable Map<String, String> properties,
-        @Nullable PartitionStrategy partitionStrategy,
-        @Nullable ColumnMapping columnMapping);
-
-    public DatasetDescriptor newDatasetDescriptor(Schema schema,
-        @Nullable URI schemaUri, Format format, @Nullable URI location,
-        @Nullable Map<String, String> properties,
-        @Nullable PartitionStrategy partitionStrategy,
-        @Nullable ColumnMapping columnMapping,
-        @Nullable CompressionType compressionType);
-
-  }
 
   private static final DatasetDescriptorBuilderFactory DATASET_DESRIPTOR_BUILDER_FACTORY;
 
-  protected static interface DatasetDescriptorBuilderFactory {
-
-    public Builder newBuilder();
-
-    public Builder newBuilder(DatasetDescriptor descriptor);
-
-  }
 
   static {
-    ServiceLoader<DatasetDescriptorFactory> factories =
+    ServiceLoader<DatasetDescriptorFactory> descriptorFactories =
         ServiceLoader.load(DatasetDescriptorFactory.class);
 
-    DatasetDescriptorFactory selectedFactory = null;
-    for (DatasetDescriptorFactory factory : factories) {
+    DatasetDescriptorFactory selectedDescriptorFactory = null;
+    for (DatasetDescriptorFactory factory : descriptorFactories) {
       LOG.debug("Using {} to build DatasetDescriptor objects", factory.getClass());
-      selectedFactory = factory;
+      selectedDescriptorFactory = factory;
       break;
     }
 
-    if (selectedFactory == null) {
-      throw new RuntimeException("No implementation of " + DatasetDescriptor.class +
-          " available. Make sure that kite-data-common is on the classpath");
+    if (selectedDescriptorFactory == null) {
+      String msg = "No implementation of org.kitesdk.data.DatasetDescriptor "
+          + "available. Make sure that kite-data-common is on the classpath";
+      LOG.error(msg);
+      throw new RuntimeException(msg);
     }
 
-    DATASET_DESCRIPTOR_FACTORY = selectedFactory;
+    DATASET_DESCRIPTOR_FACTORY = selectedDescriptorFactory;
 
     ServiceLoader<DatasetDescriptorBuilderFactory> builderFactories =
         ServiceLoader.load(DatasetDescriptorBuilderFactory.class);
@@ -797,9 +787,11 @@ public class DatasetDescriptor {
       break;
     }
 
-    if (selectedFactory == null) {
-      throw new RuntimeException("No implementation of " + DatasetDescriptor.class +
-          " available. Make sure that kite-data-common is on the classpath");
+    if (selectedBuilderFactory == null) {
+      String msg = "No implementation of org.kitesdk.data.DatasetDescriptor "
+          + "available. Make sure that kite-data-common is on the classpath";
+      LOG.error(msg);
+      throw new RuntimeException(msg);
     }
 
     DATASET_DESRIPTOR_BUILDER_FACTORY = selectedBuilderFactory;

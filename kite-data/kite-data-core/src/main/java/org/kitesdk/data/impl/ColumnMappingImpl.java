@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import org.kitesdk.data.ColumnMapping;
 import org.kitesdk.data.FieldMapping;
+import org.kitesdk.data.spi.ColumnMappingFactory;
 import org.kitesdk.data.spi.ColumnMappingParser;
 
 /**
@@ -115,7 +116,7 @@ public class ColumnMappingImpl extends ColumnMapping {
     return ColumnMappingParser.toString(this, pretty);
   }
 
-  static class ColumnMappingImplFactory implements ColumnMappingFactory {
+  public static class ColumnMappingImplFactory implements ColumnMappingFactory {
 
     @Override
     public ColumnMapping newColumnMapping(Collection<FieldMapping> fieldMappings) {

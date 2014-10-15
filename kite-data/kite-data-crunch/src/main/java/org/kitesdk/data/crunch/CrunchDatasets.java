@@ -35,6 +35,7 @@ import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.PartitionStrategy;
 import org.kitesdk.data.View;
+import org.kitesdk.data.impl.Accessor;
 import org.kitesdk.data.spi.DataModelUtil;
 import org.kitesdk.data.spi.EntityAccessor;
 import org.kitesdk.data.spi.FieldPartitioner;
@@ -304,7 +305,7 @@ public class CrunchDatasets {
 
     @SuppressWarnings({"unchecked", "deprecation"})
     public <E> AvroStorageKey reuseFor(E entity, EntityAccessor<E> accessor) {
-      List<FieldPartitioner> partitioners = strategy.getFieldPartitioners();
+      List<FieldPartitioner> partitioners = Accessor.getFieldPartitioners(strategy);
 
       for (int i = 0; i < partitioners.size(); i++) {
         FieldPartitioner fp = partitioners.get(i);

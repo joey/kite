@@ -113,7 +113,7 @@ class HiveUtils {
     final Path dataLocation = new Path(table.getSd().getLocation());
     final FileSystem fs = fsForPath(conf, dataLocation);
 
-    builder.location(fs.makeQualified(dataLocation));
+    builder.location(fs.makeQualified(dataLocation).toUri()); // JGE: revert if we keep location(Path) 
 
     // custom properties
     Map<String, String> properties = table.getParameters();
@@ -132,7 +132,7 @@ class HiveUtils {
           properties.get(OLD_PARTITION_EXPRESSION_PROPERTY_NAME));
       if (partitionProperty != null) {
         builder.partitionStrategy(
-            Accessor.getDefault().fromExpression(partitionProperty));
+            Accessor.fromExpression(partitionProperty));
       } else {
         // build a partition strategy for the table from the Hive strategy
         builder.partitionStrategy(fromPartitionColumns(getPartCols(table)));
@@ -250,7 +250,7 @@ class HiveUtils {
     if (descriptor.isPartitioned()) {
       PartitionStrategy ps = descriptor.getPartitionStrategy();
       table.getParameters().put(PARTITION_EXPRESSION_PROPERTY_NAME,
-          Accessor.getDefault().toExpression(ps));
+          Accessor.toExpression(ps));
       table.setPartitionKeys(partitionColumns(ps, descriptor.getSchema()));
     }
 
@@ -345,7 +345,7 @@ class HiveUtils {
   @SuppressWarnings("deprecation")
   static List<FieldSchema> partitionColumns(PartitionStrategy strategy, Schema schema) {
     List<FieldSchema> columns = Lists.newArrayList();
-    for (FieldPartitioner<?, ?> fp : strategy.getFieldPartitioners()) {
+    for (FieldPartitioner<?, ?> fp : Accessor.getFieldPartitioners(strategy)) {
       columns.add(new FieldSchema(fp.getName(),
           getHiveType(SchemaUtil.getPartitionType(fp, schema)),
           "Partition column derived from '" + fp.getSourceName() + "' column, " +
