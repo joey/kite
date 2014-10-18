@@ -25,9 +25,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.kitesdk.data.spi.filesystem.DatasetTestUtilities;
 
 public class TestDatasetDescriptor {
 

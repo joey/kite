@@ -34,7 +34,7 @@ import org.kitesdk.cli.TestUtil;
 import org.kitesdk.data.Datasets;
 import org.kitesdk.data.spi.DatasetRepositories;
 import org.kitesdk.data.spi.DatasetRepository;
-import org.kitesdk.data.spi.filesystem.DatasetTestUtilities;
+import org.kitesdk.data.DatasetTestUtilities;
 import org.slf4j.Logger;
 
 import static org.mockito.Mockito.mock;

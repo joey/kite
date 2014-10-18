@@ -23,33 +23,39 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.util.Utf8;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.kitesdk.data.spi.Constraints;
 
 public class TestURIBuilder {
   private static final Schema SCHEMA = SchemaBuilder.record("Event").fields()
-      .requiredString("id")
+      .requiredString("uid")
       .requiredLong("timestamp")
       .requiredString("color")
       .endRecord();
 
   private static final PartitionStrategy STRATEGY = new PartitionStrategy.Builder()
-      .hash("id", "id-hash", 64)
+      .hash("uid", "uid-hash", 64)
       .year("timestamp")
       .month("timestamp")
       .day("timestamp")
-      .identity("id")
+      .identity("uid")
       .build();
 
   private static final String ID = UUID.randomUUID().toString();
 
   private static final Constraints empty = new Constraints(SCHEMA, STRATEGY);
 
+  @BeforeClass
+  public static void setupMockRepositories() {
+    MockRepositories.newMockRepository();
+  }
+
   @Test
   public void testRepoUriAndNameToDatasetUri() {
     Assert.assertEquals("Should construct the correct dataset URI",
-        URI.create("dataset:file:/datasets/ns/test-name"),
-        new URIBuilder("repo:file:/datasets", "ns", "test-name").build());
+        URI.create("dataset:mock:0/ns/test-name"),
+        new URIBuilder("repo:mock:0", "ns", "test-name").build());
   }
 
   @Test
@@ -58,7 +64,7 @@ public class TestURIBuilder {
         IllegalArgumentException.class, new Runnable() {
           @Override
           public void run() {
-            new URIBuilder("dataset:file:/datasets/test-name", "ns", "test-name-2")
+            new URIBuilder("dataset:mock:0/test-name", "ns", "test-name-2")
                 .build();
           }
         });
@@ -66,7 +72,7 @@ public class TestURIBuilder {
         IllegalArgumentException.class, new Runnable() {
           @Override
           public void run() {
-            new URIBuilder("view:file:/datasets/test-name?n=34", "ns", "test-name-2")
+            new URIBuilder("view:mock:0/test-name?n=34", "ns", "test-name-2")
                 .build();
           }
         });
@@ -88,14 +94,14 @@ public class TestURIBuilder {
         NullPointerException.class, new Runnable() {
           @Override
           public void run() {
-            new URIBuilder("repo:file:/datasets", null, "test-name").build();
+            new URIBuilder("repo:mock:0", null, "test-name").build();
           }
         });
     TestHelpers.assertThrows("Should reject null name",
         NullPointerException.class, new Runnable() {
           @Override
           public void run() {
-            new URIBuilder("repo:file:/datasets", "ns", null).build();
+            new URIBuilder("repo:mock:0", "ns", null).build();
           }
         });
   }
@@ -103,22 +109,22 @@ public class TestURIBuilder {
   @Test
   public void testRepoUriAndNameToDatasetUriPreservesOptions() {
     Assert.assertEquals("Should construct the correct dataset URI",
-        URI.create("dataset:file:/datasets/ns/test-name?hdfs:port=1080"),
-        new URIBuilder("repo:file:/datasets?hdfs:port=1080", "ns", "test-name")
+        URI.create("dataset:mock:0/ns/test-name?hdfs:port=1080"),
+        new URIBuilder("repo:mock:0?hdfs:port=1080", "ns", "test-name")
             .build());
   }
 
   @Test
   public void testRepoUriAndNameAddEquals() {
     Assert.assertEquals("Should construct the correct dataset URI",
-        URI.create("view:file:/datasets/ns/test-name?prop=value"),
-        new URIBuilder("repo:file:/datasets", "ns", "test-name")
+        URI.create("view:mock:0/ns/test-name?prop=value"),
+        new URIBuilder("repo:mock:0", "ns", "test-name")
             .with("prop", "value")
             .build());
     // order should be preserved
     Assert.assertEquals("Should construct the correct dataset URI",
-        URI.create("view:file:/datasets/ns/test-name?prop=value&num=34"),
-        new URIBuilder("repo:file:/datasets", "ns", "test-name")
+        URI.create("view:mock:0/ns/test-name?prop=value&num=34"),
+        new URIBuilder("repo:mock:0", "ns", "test-name")
             .with("prop", "value")
             .with("num", 34)
             .build());
@@ -127,8 +133,8 @@ public class TestURIBuilder {
   @Test
   public void testDatasetUriToDatasetUri() {
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("dataset:file:/datasets/test-name"),
-        new URIBuilder("dataset:file:/datasets/test-name").build());
+        URI.create("dataset:mock:0/ns/test-name"),
+        new URIBuilder("dataset:mock:0/ns/test-name").build());
   }
 
   @Test
@@ -137,7 +143,7 @@ public class TestURIBuilder {
         IllegalArgumentException.class, new Runnable() {
           @Override
           public void run() {
-            new URIBuilder("repo:file:/datasets/test-name").build();
+            new URIBuilder("repo:mock:0/test-name").build();
           }
         });
     TestHelpers.assertThrows("Should reject null URI",
@@ -160,21 +166,21 @@ public class TestURIBuilder {
   public void testDatasetUriToDatasetUriPreservesOptions() {
     // this doesn't produce a view URI because the original isn't a view URI
     Assert.assertEquals("Should construct the correct dataset URI",
-        URI.create("dataset:file:/datasets/test-name?hdfs:port=1080"),
-        new URIBuilder("dataset:file:/datasets/test-name?hdfs:port=1080")
+        URI.create("dataset:mock:0/ns/test-name?hdfs:port=1080"),
+        new URIBuilder("dataset:mock:0/ns/test-name?hdfs:port=1080")
             .build());
   }
 
   @Test
   public void testDatasetUriAddEquals() {
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?prop=value"),
-        new URIBuilder("dataset:file:/datasets/test-name")
+        URI.create("view:mock:0/ns/test-name?prop=value"),
+        new URIBuilder("dataset:mock:0/ns/test-name")
             .with("prop", "value")
             .build());
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?prop=value&num=34"),
-        new URIBuilder("dataset:file:/datasets/test-name")
+        URI.create("view:mock:0/ns/test-name?prop=value&num=34"),
+        new URIBuilder("dataset:mock:0/ns/test-name")
             .with("prop", "value")
             .with("num", 34)
             .build());
@@ -183,31 +189,31 @@ public class TestURIBuilder {
   @Test
   public void testViewUriToViewUri() {
     Assert.assertEquals("Should produce an equivalent view URI",
-        URI.create("view:file:/datasets/test-name?prop=value"),
-        new URIBuilder("view:file:/datasets/test-name?prop=value").build());
+        URI.create("view:mock:0/ns/test-name?prop=value"),
+        new URIBuilder("view:mock:0/ns/test-name?prop=value").build());
   }
 
   @Test
   public void testViewUriAddEquals() throws Exception {
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?prop=value&field=v2"),
-        new URIBuilder("view:file:/datasets/test-name?prop=value")
+        URI.create("view:mock:0/ns/test-name?prop=value&field=v2"),
+        new URIBuilder("view:mock:0/ns/test-name?prop=value")
             .with("field", "v2")
             .build());
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?prop=value&field=v2&num=34"),
-        new URIBuilder("view:file:/datasets/test-name?prop=value")
+        URI.create("view:mock:0/ns/test-name?prop=value&field=v2&num=34"),
+        new URIBuilder("view:mock:0/ns/test-name?prop=value")
             .with("field", "v2")
             .with("num", 34)
             .build());
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?field=a/b"),
-        new URIBuilder("view:file:/datasets/test-name")
+        URI.create("view:mock:0/ns/test-name?field=a/b"),
+        new URIBuilder("view:mock:0/ns/test-name")
             .with("field", "a/b")
             .build());
     Assert.assertEquals("Should produce an equivalent dataset URI",
-        URI.create("view:file:/datasets/test-name?field=a%2Fb"),
-        new URIBuilder("view:file:/datasets/test-name")
+        URI.create("view:mock:0/ns/test-name?field=a%2Fb"),
+        new URIBuilder("view:mock:0/ns/test-name")
             .with("field", URLEncoder.encode("a/b", "UTF-8"))
             .build());
   }
@@ -215,57 +221,57 @@ public class TestURIBuilder {
   @Test
   public void testAddEqualityConstraints() {
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?id=" + ID),
-        new URIBuilder("dataset:file:/datasets/test")
-            .constraints(empty.with("id", new Utf8(ID)))
+        URI.create("view:mock:0/ns/test?uid=" + ID),
+        new URIBuilder("dataset:mock:0/ns/test")
+            .constraints(empty.with("uid", new Utf8(ID)))
                 .build());
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?id=a,b"),
-        new URIBuilder("dataset:file:/datasets/test")
-            .constraints(empty.with("id", new Utf8("a"), new Utf8("b")))
+        URI.create("view:mock:0/ns/test?uid=a,b"),
+        new URIBuilder("dataset:mock:0/ns/test")
+            .constraints(empty.with("uid", new Utf8("a"), new Utf8("b")))
             .build());
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?id=" + ID + "&timestamp=1405720705333"),
-        new URIBuilder("dataset:file:/datasets/test")
+        URI.create("view:mock:0/ns/test?uid=" + ID + "&timestamp=1405720705333"),
+        new URIBuilder("dataset:mock:0/ns/test")
             .constraints(
-                empty.with("id", new Utf8(ID)).with("timestamp", 1405720705333L))
+                empty.with("uid", new Utf8(ID)).with("timestamp", 1405720705333L))
             .build());
     Assert.assertEquals("Should add encoded equality constraints",
-        URI.create("view:file:/datasets/test?id=a%2Fb"),
-        new URIBuilder("dataset:file:/datasets/test")
-            .constraints(empty.with("id", new Utf8("a/b")))
+        URI.create("view:mock:0/ns/test?uid=a%2Fb"),
+        new URIBuilder("dataset:mock:0/ns/test")
+            .constraints(empty.with("uid", new Utf8("a/b")))
             .build());
   }
 
   @Test
   public void testAddExistsConstraints() {
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?id="),
-        new URIBuilder("dataset:file:/datasets/test")
-            .constraints(empty.with("id"))
+        URI.create("view:mock:0/ns/test?uid="),
+        new URIBuilder("dataset:mock:0/ns/test")
+            .constraints(empty.with("uid"))
             .build());
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?id=&timestamp="),
-        new URIBuilder("dataset:file:/datasets/test")
-            .constraints(empty.with("id").with("timestamp"))
+        URI.create("view:mock:0/ns/test?uid=&timestamp="),
+        new URIBuilder("dataset:mock:0/ns/test")
+            .constraints(empty.with("uid").with("timestamp"))
             .build());
   }
 
   @Test
   public void testAddRangeConstraints() {
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?color=[green,)"),
-        new URIBuilder("dataset:file:/datasets/test")
+        URI.create("view:mock:0/ns/test?color=[green,)"),
+        new URIBuilder("dataset:mock:0/ns/test")
             .constraints(empty.from("color", "green"))
             .build());
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?color=(,green]"),
-        new URIBuilder("dataset:file:/datasets/test")
+        URI.create("view:mock:0/ns/test?color=(,green]"),
+        new URIBuilder("dataset:mock:0/ns/test")
             .constraints(empty.to("color", "green"))
             .build());
     Assert.assertEquals("Should add equality constraints",
-        URI.create("view:file:/datasets/test?timestamp=[0,1405720705333)&color=(green,red]"),
-        new URIBuilder("dataset:file:/datasets/test")
+        URI.create("view:mock:0/ns/test?timestamp=[0,1405720705333)&color=(green,red]"),
+        new URIBuilder("dataset:mock:0/ns/test")
             .constraints(empty
                 .from("timestamp", 0l).toBefore("timestamp", 1405720705333L)
                 .fromAfter("color", "green").to("color", "red"))
@@ -275,8 +281,8 @@ public class TestURIBuilder {
   @Test
   public void testEmptyConstraints() {
     Assert.assertEquals("Empty constraints should produce dataset URI",
-        URI.create("dataset:file:/datasets/test"),
-        new URIBuilder("dataset:file:/datasets/test")
+        URI.create("dataset:mock:0/ns/test"),
+        new URIBuilder("dataset:mock:0/ns/test")
             .constraints(empty)
             .build());
   }

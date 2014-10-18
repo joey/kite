@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data.spi.filesystem;
 
+import org.kitesdk.data.DatasetTestUtilities;
 import org.kitesdk.data.TestDatasetReaders;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.DatasetReaderException;
@@ -33,7 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.*;
+import static org.kitesdk.data.DatasetTestUtilities.*;
 import org.apache.avro.generic.GenericData;
 import org.kitesdk.data.spi.AbstractDatasetReader;
 

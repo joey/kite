@@ -15,6 +15,7 @@
  */
 package org.kitesdk.data.spi.filesystem;
 
+import org.kitesdk.data.DatasetTestUtilities;
 import com.google.common.collect.Sets;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -39,7 +40,7 @@ import org.junit.Test;
 import org.kitesdk.data.TestHelpers;
 import org.kitesdk.data.View;
 
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.USER_SCHEMA;
+import static org.kitesdk.data.DatasetTestUtilities.USER_SCHEMA;
 
 public class TestPartitionedDatasetWriter {
 

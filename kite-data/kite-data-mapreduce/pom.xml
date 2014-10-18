@@ -99,6 +99,11 @@
     </dependency>
     <dependency>
       <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-filesystem</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.kitesdk</groupId>
       <artifactId>kite-data-hive</artifactId>
       <version>0.17.1-SNAPSHOT</version>
       <optional>true</optional>

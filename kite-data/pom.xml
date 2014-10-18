@@ -25,6 +25,7 @@
   <modules>
     <module>kite-data-api</module>
     <module>kite-data-core</module>
+    <module>kite-data-filesystem</module>
     <module>kite-data-hive</module>
     <module>kite-data-crunch</module>
     <module>kite-data-flume</module>

@@ -16,6 +16,8 @@
 
 package org.kitesdk.data.spi.filesystem;
 
+import org.kitesdk.data.spi.TestGenericRecord;
+import org.kitesdk.data.DatasetTestUtilities;
 import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.TestDatasetReaders;

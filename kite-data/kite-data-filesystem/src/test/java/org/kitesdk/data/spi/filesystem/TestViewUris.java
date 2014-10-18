@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.kitesdk.data.spi;
+package org.kitesdk.data.spi.filesystem;
 
 import java.net.URI;
 import org.apache.avro.Schema;

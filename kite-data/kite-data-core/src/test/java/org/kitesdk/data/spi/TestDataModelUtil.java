@@ -32,7 +32,6 @@ import org.kitesdk.data.event.ReflectSmallEvent;
 import org.kitesdk.data.event.ReflectStandardEvent;
 import org.kitesdk.data.event.SmallEvent;
 import org.kitesdk.data.event.StandardEvent;
-import org.kitesdk.data.spi.filesystem.TestGenericRecord;
 
 public class TestDataModelUtil {
   

@@ -48,10 +48,10 @@ import org.kitesdk.data.View;
 import org.kitesdk.data.spi.LastModifiedAccessor;
 import org.kitesdk.data.URIBuilder;
 
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.USER_SCHEMA;
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.checkTestUsers;
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.datasetSize;
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.writeTestUsers;
+import static org.kitesdk.data.DatasetTestUtilities.USER_SCHEMA;
+import static org.kitesdk.data.DatasetTestUtilities.checkTestUsers;
+import static org.kitesdk.data.DatasetTestUtilities.datasetSize;
+import static org.kitesdk.data.DatasetTestUtilities.writeTestUsers;
 
 @RunWith(Parameterized.class)
 public abstract class TestCrunchDatasets extends MiniDFSTest {

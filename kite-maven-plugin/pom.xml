@@ -73,7 +73,17 @@
   <dependencies>
     <dependency>
       <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-api</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.kitesdk</groupId>
       <artifactId>kite-data-core</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-filesystem</artifactId>
       <version>0.17.1-SNAPSHOT</version>
     </dependency>
     <dependency>

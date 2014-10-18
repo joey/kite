@@ -41,7 +41,7 @@ import org.kitesdk.data.hbase.testing.HBaseTestUtils;
 import org.kitesdk.data.spi.DatasetRepository;
 
 import static org.junit.Assert.assertEquals;
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.datasetSize;
+import static org.kitesdk.data.DatasetTestUtilities.datasetSize;
 
 public class TestCrunchDatasetsHBase {
   private static final String testGenericEntity;

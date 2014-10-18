@@ -492,7 +492,10 @@ public abstract class PartitionStrategy {
     }
 
     if (selectedFactory == null) {
-      throw new RuntimeException();
+      String msg = "No implementation of " + PartitionStrategy.class
+          + " available. Make sure that kite-data-common is on the classpath";
+      LOG.error(msg);
+      throw new RuntimeException(msg);
     }
 
     PARTITION_STRATEGY_BUILDER_FACTORY = selectedFactory;

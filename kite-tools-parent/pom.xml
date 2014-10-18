@@ -84,7 +84,19 @@
 
     <dependency>
       <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.kitesdk</groupId>
       <artifactId>kite-data-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-filesystem</artifactId>
       <version>${project.version}</version>
     </dependency>
 

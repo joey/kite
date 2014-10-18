@@ -41,7 +41,7 @@ import org.kitesdk.data.Datasets;
 import org.kitesdk.data.MiniDFSTest;
 import org.kitesdk.data.TestHelpers;
 import org.kitesdk.data.URIBuilder;
-import org.kitesdk.data.spi.filesystem.DatasetTestUtilities;
+import org.kitesdk.data.DatasetTestUtilities;
 import org.slf4j.Logger;
 
 import static org.mockito.Mockito.mock;

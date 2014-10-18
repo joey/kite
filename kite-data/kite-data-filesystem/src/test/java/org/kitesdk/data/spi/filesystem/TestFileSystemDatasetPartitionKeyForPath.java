@@ -29,7 +29,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.USER_SCHEMA;
+import static org.kitesdk.data.DatasetTestUtilities.USER_SCHEMA;
 import static org.kitesdk.data.spi.filesystem.FileSystemDatasetRepository
     .partitionKeyForPath;
 import org.apache.avro.generic.GenericData.Record;

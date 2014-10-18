@@ -20,27 +20,34 @@ import java.net.URI;
 import org.junit.Test;
 
 import junit.framework.Assert;
+import org.junit.BeforeClass;
 
 public class TestDatasetsURIBuilder {
+
+  @BeforeClass
+  public static void setupMockRepositories() {
+    MockRepositories.newMockRepository();
+  }
+
   @Test
   public void testBuildDatasetUri() {
-    URI uri = new URIBuilder("repo:file:/tmp/data", "ns", "test-ds").build();
-    Assert.assertEquals(URI.create("dataset:file:/tmp/data/ns/test-ds"), uri);
+    URI uri = new URIBuilder("repo:mock:0", "ns", "test-ds").build();
+    Assert.assertEquals(URI.create("dataset:mock:0/ns/test-ds"), uri);
   }
-  
+
   @Test
   public void testBuildViewUri() {
-    URI uri = new URIBuilder("repo:file:/tmp/data", "ns", "test-ds")
+    URI uri = new URIBuilder("repo:mock:0", "ns", "test-ds")
         .with("username", "bob").with("lastName", "Smith").build();
-    Assert.assertEquals(URI.create("view:file:/tmp/data/ns/test-ds?username=bob&lastName=Smith"), uri);
+    Assert.assertEquals(URI.create("view:mock:0/ns/test-ds?username=bob&lastName=Smith"), uri);
   }
-  
+
   @Test
   public void testRepoUriHasQueryString() {
-    URI uri = new URIBuilder("repo:file:/tmp/data?repoParam=x", "ns", "test-ds")
+    URI uri = new URIBuilder("repo:mock:0?repoParam=x", "ns", "test-ds")
         .with("username", "bob")
         .build();
-    
-    Assert.assertEquals(URI.create("view:file:/tmp/data/ns/test-ds?repoParam=x&username=bob"), uri);
+
+    Assert.assertEquals(URI.create("view:mock:0/ns/test-ds?repoParam=x&username=bob"), uri);
   }
 }

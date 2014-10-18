@@ -30,7 +30,7 @@ import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.DatasetWriter;
 import org.kitesdk.data.TestDatasetReaders;
-import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
+import org.kitesdk.data.DatasetTestUtilities.RecordValidator;
 
 public class TestWriteReflectReadGeneric extends TestDatasetReaders<GenericRecord> {
 

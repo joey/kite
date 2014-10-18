@@ -15,6 +15,8 @@
  */
 package org.kitesdk.data.spi.filesystem;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.kitesdk.data.Dataset;
 import org.kitesdk.data.DatasetDescriptor;
@@ -50,7 +52,7 @@ import org.kitesdk.data.spi.PartitionedDataset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.kitesdk.data.spi.filesystem.DatasetTestUtilities.*;
+import static org.kitesdk.data.DatasetTestUtilities.*;
 import org.kitesdk.data.spi.FieldPartitioner;
 
 @RunWith(Parameterized.class)
@@ -588,6 +590,19 @@ public class TestFileSystemDataset extends MiniDFSTest {
       }
     }
     return readCount;
+  }
+
+  public static <E> void testPartitionKeysAreEqual(PartitionedDataset<E> ds,
+      PartitionKey... expectedKeys) {
+    Set<PartitionKey> expected = Sets.newHashSet(expectedKeys);
+    Set<PartitionKey> actual = Sets.newHashSet(Iterables.transform(ds.getPartitions(),
+        new Function<Dataset, PartitionKey>() {
+      @Override
+      public PartitionKey apply(Dataset input) {
+        return ((FileSystemDataset) input).getPartitionKey();
+      }
+    }));
+    Assert.assertEquals(expected, actual);
   }
 
 }

@@ -17,7 +17,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>kite-data-crunch</artifactId>
+  <artifactId>kite-data-filesystem</artifactId>
 
   <parent>
     <groupId>org.kitesdk</groupId>
@@ -25,38 +25,60 @@
     <version>0.17.1-SNAPSHOT</version>
   </parent>
 
-  <name>Kite Data Crunch Module</name>
+  <name>Kite Data Filesystem Module</name>
   <description>
-    The Kite Data Crunch module provides Crunch support for working with Kite datasets.
+    The Kite Data Filesystem module provides an implementation of Kite's data
+    API for datasets stored in Hadoop-compatable file systems.
   </description>
 
   <build>
+    <!--
+    <resources>
+      <resource>
+        <directory>src/test/avro</directory>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
+    -->
     <plugins>
+      <!--
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+      </plugin>
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
+        <configuration> <!-- remove this once org.kitesdk.data.PartitionKey has been removed -->
+          <compilerArgs>
+            <arg>-Xlint:unchecked</arg>
+          </compilerArgs>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal> <!-- publish test-jar for other modules -->
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <excludePackageNames>org.kitesdk.data.spi.*</excludePackageNames>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemProperties>
-            <property>
-              <!-- Make sure derby.log goes to target/ subdir
-                   when running tests involving Hive -->
-              <name>derby.stream.error.file</name>
-              <value>target/derby.log</value>
-            </property>
-          </systemProperties>
-        </configuration>
+        <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.rat</groupId>
@@ -94,37 +116,19 @@
   </reporting>
 
   <dependencies>
-    <!-- Kite -->
+    <!-- Kite Data API and Data Common -->
+    <dependency>
+      <groupId>org.kitesdk</groupId>
+      <artifactId>kite-data-api</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+    </dependency>
     <dependency>
       <groupId>org.kitesdk</groupId>
       <artifactId>kite-data-core</artifactId>
       <version>0.17.1-SNAPSHOT</version>
     </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-mapreduce</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-filesystem</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-hive</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-hbase</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-      <optional>true</optional>
-    </dependency>
 
     <!-- Hadoop -->
-
     <dependency>
       <groupId>org.kitesdk</groupId>
       <artifactId>${artifact.hadoop-deps}</artifactId>
@@ -133,19 +137,7 @@
     </dependency>
     <dependency>
       <groupId>org.kitesdk</groupId>
-      <artifactId>${artifact.hbase-deps}</artifactId>
-      <type>pom</type>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
       <artifactId>kite-hadoop-compatibility</artifactId>
-    </dependency>
-
-    <!-- Crunch -->
-    <dependency>
-      <groupId>org.apache.crunch</groupId>
-      <artifactId>crunch-core</artifactId>
     </dependency>
 
     <!-- Formats -->
@@ -153,23 +145,26 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
     </dependency>
-
-    <!-- These should be compile-dependencies of kite-data-hive
-         But, hive-exec includes classes from other modules at Hive-specific
-         versions, including avro's Schema. This causes errors in this and
-         other modules, so these are marked provided.
-         -->
     <dependency>
-      <groupId>org.apache.hive</groupId>
-      <artifactId>hive-exec</artifactId>
-      <scope>provided</scope>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-avro</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.hive</groupId>
-      <artifactId>hive-serde</artifactId>
-      <scope>provided</scope>
+      <groupId>net.sf.opencsv</groupId>
+      <artifactId>opencsv</artifactId>
     </dependency>
 
+    <!-- Misc -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
@@ -193,29 +188,6 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-core</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-filesystem</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.kitesdk</groupId>
-      <artifactId>kite-data-hbase</artifactId>
-      <version>0.17.1-SNAPSHOT</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.kitesdk</groupId>
       <artifactId>${artifact.hadoop-test-deps}</artifactId>
@@ -224,16 +196,24 @@
     </dependency>
     <dependency>
       <groupId>org.kitesdk</groupId>
-      <artifactId>${artifact.hbase-test-deps}</artifactId>
-      <type>pom</type>
+      <artifactId>kite-data-core</artifactId>
+      <version>0.17.1-SNAPSHOT</version>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-
-    <!-- fix hbase/hive thrift version conflict -->
     <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
-      <version>0.9.0</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>joda-time</groupId>
+      <artifactId>joda-time</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
       <scope>test</scope>
     </dependency>
 

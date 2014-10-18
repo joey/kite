@@ -16,6 +16,7 @@
 
 package org.kitesdk.data.spi.filesystem;
 
+import org.kitesdk.data.spi.TestGenericRecord;
 import com.google.common.io.Files;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -29,7 +30,7 @@ import org.kitesdk.data.DatasetDescriptor;
 import org.kitesdk.data.DatasetReader;
 import org.kitesdk.data.DatasetWriter;
 import org.kitesdk.data.TestDatasetReaders;
-import org.kitesdk.data.spi.filesystem.DatasetTestUtilities.RecordValidator;
+import org.kitesdk.data.DatasetTestUtilities.RecordValidator;
 
 public class TestReadCustomGeneric extends TestDatasetReaders<TestGenericRecord> {
 

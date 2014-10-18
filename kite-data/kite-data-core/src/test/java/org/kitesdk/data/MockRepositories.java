@@ -35,17 +35,16 @@ public class MockRepositories {
   private static boolean registered = false;
 
   private static void registerMockRepoBuilder() {
-    final URIPattern mockPattern = new URIPattern("mock::id");
-    Registration.register(
-        mockPattern, mockPattern,
+    final URIPattern mockRepoPattern = new URIPattern("mock::id");
+    final URIPattern mockDatasetPattern = new URIPattern("mock::id/:namespace/:dataset");
+    Registration.register(mockRepoPattern, mockDatasetPattern,
         new OptionBuilder<DatasetRepository>() {
           @Override
           public DatasetRepository getFromOptions(Map<String, String> options) {
             DatasetRepository repo = repos.get(options.get("id"));
             if (repo == null) {
               repo = mock(org.kitesdk.data.spi.DatasetRepository.class);
-              when(repo.getUri()).thenReturn(
-                  URI.create("repo:" + mockPattern.construct(options)));
+              when(repo.getUri()).thenReturn(URI.create("repo:" + mockRepoPattern.construct(options)));
               repos.put(options.get("id"), repo);
             }
             return repo;

@@ -13,14 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kitesdk.data.spi.filesystem;
+package org.kitesdk.data;
 
-import org.kitesdk.data.Dataset;
-import org.kitesdk.data.DatasetReader;
-import org.kitesdk.data.DatasetWriter;
-import org.kitesdk.data.spi.PartitionKey;
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 import java.io.IOException;
@@ -31,11 +25,8 @@ import java.util.Set;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecordBuilder;
-import org.apache.avro.util.Utf8;
 import org.junit.Assert;
-import org.kitesdk.data.View;
 import org.kitesdk.data.spi.InitializeAccessor;
-import org.kitesdk.data.spi.PartitionedDataset;
 
 public class DatasetTestUtilities {
 
@@ -156,20 +147,6 @@ public class DatasetTestUtilities {
 
   public static <E> int datasetSize(View<E> ds) {
     return materialize(ds).size();
-  }
-
-  @SuppressWarnings("deprecation")
-  public static <E> void testPartitionKeysAreEqual(PartitionedDataset<E> ds,
-      PartitionKey... expectedKeys) {
-    Set<PartitionKey> expected = Sets.newHashSet(expectedKeys);
-    Set<PartitionKey> actual = Sets.newHashSet(Iterables.transform(ds.getPartitions(),
-        new Function<Dataset, PartitionKey>() {
-      @Override
-      public PartitionKey apply(Dataset input) {
-        return ((FileSystemDataset) input).getPartitionKey();
-      }
-    }));
-    Assert.assertEquals(expected, actual);
   }
 
   public static interface RecordValidator<R> {
