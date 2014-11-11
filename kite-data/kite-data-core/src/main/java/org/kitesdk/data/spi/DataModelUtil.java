@@ -22,13 +22,17 @@ import java.util.Map;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.ReflectDatumReader;
+import org.apache.avro.reflect.ReflectDatumWriter;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
 import org.kitesdk.data.IncompatibleSchemaException;
 
@@ -94,6 +98,26 @@ public class DataModelUtil {
       return new SpecificDatumReader<E>(writerSchema, readerSchema, (SpecificData)dataModel);
     } else {
       return new GenericDatumReader<E>(writerSchema, readerSchema, dataModel);
+    }
+  }
+
+  /**
+   * Get the DatumWriter for the given type.
+   *
+   * @param <E> The entity type
+   * @param type The Java class of the entity type
+   * @param schema The {@link Schema} for entities
+   * @return The DatumWriter for the given type
+   */
+  @SuppressWarnings("unchecked")
+  public static <E> DatumWriter<E> getDatumWriterForType(Class<E> type, Schema schema) {
+    GenericData dataModel = getDataModelForType(type);
+    if (dataModel instanceof ReflectData) {
+      return new ReflectDatumWriter<E>(schema, (ReflectData)dataModel);
+    } else if (dataModel instanceof SpecificData) {
+      return new SpecificDatumWriter<E>(schema, (SpecificData)dataModel);
+    } else {
+      return new GenericDatumWriter<E>(schema, dataModel);
     }
   }
 

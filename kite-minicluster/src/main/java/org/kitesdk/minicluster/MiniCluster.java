@@ -59,6 +59,8 @@ public class MiniCluster {
   public static final String HIVE_SERVER_PORT = "hive-server-port";
   public static final String FLUME_CONFIGURATION = "flume-configuration";
   public static final String FLUME_AGENT_NAME = "flume-agent-name";
+  public static final String NUM_KAFKA_BROKERS = "num-kafka-brokers";
+  public static final String SCHEMA_REPO_PORT_KEY = "schema-repo-port";
 
   static final String RESOURCE_URI_SCHEME = "resource";
 
@@ -150,6 +152,16 @@ public class MiniCluster {
 
     public Builder flumeAgentName(String name) {
       serviceConfig.set(FLUME_AGENT_NAME, name);
+      return this;
+    }
+
+    public Builder numKafkaBrokers(int numKafkaBrokers) {
+      serviceConfig.set(NUM_KAFKA_BROKERS, Integer.toString(numKafkaBrokers));
+      return this;
+    }
+
+    public Builder schemaRepoPort(int schemaRepoPort) {
+      serviceConfig.set(SCHEMA_REPO_PORT_KEY, Integer.toString(schemaRepoPort));
       return this;
     }
 

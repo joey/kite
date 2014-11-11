@@ -126,6 +126,7 @@
     <artifact.hadoop-test-deps>kite-hadoop-test-dependencies</artifact.hadoop-test-deps>
     <artifact.hbase-deps>kite-hbase-dependencies</artifact.hbase-deps>
     <artifact.hbase-test-deps>kite-hbase-test-dependencies</artifact.hbase-test-deps>
+    <artifact.kafka>kafka_2.9.2</artifact.kafka>
 
     <!-- Library versions -->
     <vers.avro>1.7.5</vers.avro>
@@ -174,6 +175,8 @@
     <vers.jodatime>2.3</vers.jodatime>
     <vers.jcommander>1.35</vers.jcommander>
     <vers.spark>1.0.0</vers.spark>
+    <vers.zookeeper>3.4.6</vers.zookeeper>
+    <vers.kafka>0.8.2-beta</vers.kafka>
 
     <!-- Plugin versions -->
     <vers.doxia-module-markdown>1.4</vers.doxia-module-markdown>
@@ -560,6 +563,7 @@
               <exclude>**/src/test/resources/test-documents/**</exclude> <!-- ASL 2.0 -->
               <exclude>**/src/site/**/*.confluence</exclude>
               <exclude>**/nbactions.xml</exclude> <!-- Netbeans configs, not checked in -->
+              <exclude>**/nb-configuration.xml</exclude> <!-- Netbeans configs, not checked in -->
             </excludes>
           </configuration>
         </plugin>
@@ -816,6 +820,28 @@
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-core_2.10</artifactId>
         <version>${vers.spark}</version>
+      </dependency>
+
+      <!-- Kafka -->
+      <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>${artifact.kafka}</artifactId>
+        <version>${vers.kafka}</version>
+        <scope>compile</scope>
+        <exclusions>
+          <exclusion>
+            <artifactId>jmxri</artifactId>
+            <groupId>com.sun.jmx</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jms</artifactId>
+            <groupId>javax.jms</groupId>
+          </exclusion>
+          <exclusion>
+            <artifactId>jmxtools</artifactId>
+            <groupId>com.sun.jdmk</groupId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!-- Misc -->
@@ -1190,6 +1216,7 @@
         <vers.flume>1.4.0</vers.flume>
         <vers.hive>0.10.0</vers.hive>
         <vers.commons-lang>2.4</vers.commons-lang>
+        <vers.zookeeper>3.4.5</vers.zookeeper>
       </properties>
     </profile>
 
@@ -1212,6 +1239,7 @@
         <vers.flume>1.4.0-cdh${cdh4.version}</vers.flume>
         <vers.hive>0.10.0-cdh${cdh4.version}</vers.hive>
         <vers.oozie>3.3.2-cdh${cdh4.version}</vers.oozie>
+        <vers.zookeeper>3.4.5-cdh${cdh4.version}</vers.zookeeper>
       </properties>
     </profile>
 
@@ -1237,6 +1265,7 @@
         <vers.oozie>4.0.0-cdh${cdh5.version}</vers.oozie>
         <vers.solr>${vers.solr-cdh5}</vers.solr>
         <solr.expected.version>${vers.solr-cdh5}</solr.expected.version> <!-- sanity check to verify we actually run against the expected version rather than some outdated version -->
+        <vers.zookeeper>3.4.5-cdh${cdh5.version}</vers.zookeeper>
       </properties>
     </profile>
 
